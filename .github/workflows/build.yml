@@ -1,0 +1,67 @@
+name: Build iBRA PLAYER
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build debug APK
+        working-directory: apps/android
+        run: gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ibra-player-android-apk
+          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Windows portable package
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtmultimedia
+          cache: true
+      - name: Configure
+        run: cmake -S apps/windows -B build/windows -A x64
+      - name: Build
+        run: cmake --build build/windows --config Release
+      - name: Assemble portable directory
+        shell: pwsh
+        run: |
+          $stage = Join-Path $PWD 'build\windows\portable'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          $exe = Get-ChildItem 'build\windows' -Recurse -Filter 'iBRA PLAYER.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Windows executable not found.' }
+          Copy-Item $exe.FullName $stage
+          & windeployqt --release --no-translations (Join-Path $stage 'iBRA PLAYER.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
+          Set-Content -Path (Join-Path $stage 'README.txt') -Value 'Extract the complete folder and run iBRA PLAYER.exe. Keep all included Qt DLLs and plugins beside it.'
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath (Join-Path $PWD 'build\windows\iBRA-PLAYER-Windows-Portable.zip') -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ibra-player-windows-portable
+          path: build/windows/iBRA-PLAYER-Windows-Portable.zip
+          if-no-files-found: error
+          retention-days: 14

@@ -10,12 +10,41 @@ android {
         applicationId 'com.ibrata2.player'
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName '0.1.0'
+        versionCode 10
+        versionName '1.0.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Signed with the debug key so the APK installs directly on head units.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    packaging {
+        jniLibs { useLegacyPackaging true }
     }
 }
 
+def media3 = '1.8.0'
 dependencies {
-    implementation 'androidx.media3:media3-exoplayer:1.11.1'
-    implementation 'androidx.media3:media3-ui:1.11.1'
+    implementation "androidx.media3:media3-exoplayer:$media3"
+    implementation "androidx.media3:media3-session:$media3"
+    implementation "androidx.media3:media3-ui:$media3"
+    // FFmpeg audio decoder (AC-3, E-AC-3, DTS, TrueHD, MP2, ALAC, FLAC...) for units whose chip lacks them
+    implementation "org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1"
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.core:core:1.16.0'
+    implementation 'androidx.annotation:annotation-experimental:1.4.1'
 }

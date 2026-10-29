@@ -68,7 +68,6 @@ jobs:
             mingw-w64-ucrt-x86_64-mpv
             mingw-w64-ucrt-x86_64-ntldd
             mingw-w64-ucrt-x86_64-ffmpeg
-            mingw-w64-ucrt-x86_64-mesa
             mingw-w64-ucrt-x86_64-python
             zip
 
@@ -106,6 +105,7 @@ jobs:
           # The test copy gets Mesa's software OpenGL because CI machines have no GPU.
           # Mesa is NOT shipped in the installer.
           set +e +o pipefail
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-mesa > /dev/null
           cp -r build/stage build/test
           for f in $(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -iE '/bin/.*\.dll$'); do cp "$f" build/test/; done
           for f in build/test/opengl32.dll build/test/libgallium_wgl.dll; do
@@ -144,6 +144,21 @@ jobs:
           if [ $code -ne 124 ]; then echo "::error::player exited by itself (code $code) instead of staying open"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
           if ! echo "$newlines" | grep -q "main window shown.*video surface ready"; then echo "::error::main window/video surface not ready"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
           echo "Player started normally and stayed open."
+
+      - name: Start-up check of the shipped folder (no test DLLs)
+        run: |
+          set +e +o pipefail
+          if ls build/stage | grep -iqE '^(opengl32|libgallium|libglapi)'; then echo "::error::Mesa OpenGL DLL found in package"; exit 1; fi
+          log="$(cygpath -u "$APPDATA")/iBRA PLAYER/logs/ibra-player.log"
+          before=$(wc -l < "$log" 2>/dev/null || echo 0)
+          timeout 12 "build/stage/iBRA PLAYER.exe"
+          code=$?
+          newlines=$(tail -n +$((before + 1)) "$log")
+          echo "$newlines"
+          if [ $code -ne 124 ]; then echo "::error::shipped player exited by itself (code $code)"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
+          if ! echo "$newlines" | grep -q "main window shown"; then echo "::error::shipped player: main window not shown"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
+          if echo "$newlines" | grep -qi "mesa"; then echo "::error::shipped player is using Mesa OpenGL"; exit 1; fi
+          echo "Shipped folder starts and stays open."
 
       - name: Portable build
         run: |

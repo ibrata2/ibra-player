@@ -22,6 +22,17 @@ cp "$QTPLUG"/tls/*.dll "$STAGE/tls/" 2>/dev/null || true
 cp "$QTPLUG"/styles/*.dll "$STAGE/styles/" 2>/dev/null || true
 printf '[Paths]\nPlugins = .\n' > "$STAGE/qt.conf"
 
+# DLLs that must always come from Windows itself. In particular opengl32.dll:
+# MSYS2's Mesa provides one, and shipping it replaces the real GPU driver.
+is_excluded() {
+  case "${1,,}" in
+    opengl32.dll|libgallium_wgl.dll|libglapi.dll|libgallium*.dll|dxil.dll|vulkan-1.dll|d3dcompiler_47.dll) return 0 ;;
+  esac
+  owner=$(pacman -Qqo "$PREFIX/bin/$1" 2>/dev/null || true)
+  [ "$owner" = "mingw-w64-ucrt-x86_64-mesa" ] && return 0
+  return 1
+}
+
 # Resolve every DLL dependency that lives inside the MSYS2 prefix (recursive)
 collect() {
   ntldd -R "$1" 2>/dev/null | awk '{print $3}' | tr '\\' '/' | grep -i "/ucrt64/bin/" || true
@@ -34,6 +45,7 @@ for target in "${queue[@]}"; do
     [ -z "$dll" ] && continue
     unix=$(cygpath -u "$dll")
     name=$(basename "$unix")
+    if is_excluded "$name"; then continue; fi
     if [ -z "${seen[$name]:-}" ] && [ -f "$unix" ]; then
       seen[$name]=1
       cp "$unix" "$STAGE/"
@@ -41,6 +53,9 @@ for target in "${queue[@]}"; do
   done < <(collect "$target")
 done
 echo "Bundled ${#seen[@]} libraries"
+for bad in opengl32.dll libgallium_wgl.dll libglapi.dll; do
+  if [ -f "$STAGE/$bad" ]; then echo "::error::$bad must not be shipped"; exit 1; fi
+done
 
 # Licenses of every bundled MSYS2 package + our own
 mkdir -p "$STAGE/licenses"

@@ -1,10 +1,51 @@
 cmake_minimum_required(VERSION 3.21)
-project(IBRA_PLAYER VERSION 0.1.0 LANGUAGES CXX)
+project(IBRA_PLAYER VERSION 1.0.0 LANGUAGES CXX)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Multimedia MultimediaWidgets)
-qt_standard_project_setup()
-qt_add_executable(ibra-player WIN32 src/main.cpp)
-target_link_libraries(ibra-player PRIVATE Qt6::Widgets Qt6::Multimedia Qt6::MultimediaWidgets)
+set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Network)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+
+set(SOURCES
+    src/main.cpp
+    src/engine/MpvWidget.cpp       src/engine/MpvWidget.h
+    src/core/I18n.cpp              src/core/I18n.h
+    src/core/AppSettings.cpp       src/core/AppSettings.h
+    src/core/Library.cpp           src/core/Library.h
+    src/core/Playlist.cpp          src/core/Playlist.h
+    src/core/Log.cpp               src/core/Log.h
+    src/core/Shortcuts.cpp         src/core/Shortcuts.h
+    src/theme/Theme.cpp            src/theme/Theme.h
+    src/ui/Icons.cpp               src/ui/Icons.h
+    src/ui/GlassPanel.cpp          src/ui/GlassPanel.h
+    src/ui/TitleBar.cpp            src/ui/TitleBar.h
+    src/ui/ControlBar.cpp          src/ui/ControlBar.h
+    src/ui/PlaylistPanel.cpp       src/ui/PlaylistPanel.h
+    src/ui/MainWindow.cpp          src/ui/MainWindow.h
+    src/ui/SettingsDialog.cpp      src/ui/SettingsDialog.h
+    src/ui/ThemeStudio.cpp         src/ui/ThemeStudio.h
+    src/ui/MediaInfoDialog.cpp     src/ui/MediaInfoDialog.h
+    src/ui/AboutDialog.cpp         src/ui/AboutDialog.h
+    src/platform/Platform.cpp      src/platform/Platform.h
+    resources/ibra.qrc
+)
+if(WIN32)
+    list(APPEND SOURCES resources/app.rc)
+endif()
+
+qt_add_executable(ibra-player WIN32 ${SOURCES})
+target_include_directories(ibra-player PRIVATE src resources)
+target_compile_definitions(ibra-player PRIVATE IBRA_VERSION="${PROJECT_VERSION}")
+target_link_libraries(ibra-player PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Network
+    PkgConfig::MPV)
+if(WIN32)
+    target_link_libraries(ibra-player PRIVATE dwmapi user32 shell32 advapi32)
+endif()
 set_target_properties(ibra-player PROPERTIES OUTPUT_NAME "iBRA PLAYER")
+
+install(TARGETS ibra-player RUNTIME DESTINATION .)

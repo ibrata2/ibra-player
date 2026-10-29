@@ -2,10 +2,11 @@ name: Build iBRA PLAYER
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -31,44 +32,105 @@ jobs:
           retention-days: 14
 
   windows:
-    name: Windows setup installer
+    name: Windows (iBRA PLAYER Setup + portable)
     runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: jurplel/install-qt-action@v4
+
+      - uses: msys2/setup-msys2@v2
         with:
-          version: '6.8.3'
-          host: windows
-          target: desktop
-          arch: win64_msvc2022_64
-          modules: qtmultimedia
-          cache: true
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-mesa
+            mingw-w64-ucrt-x86_64-python
+            zip
+
+      - name: Read version
+        id: ver
+        run: |
+          v=$(grep -oP 'project\(IBRA_PLAYER VERSION \K[0-9.]+' apps/windows/CMakeLists.txt)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "iBRA PLAYER $v"
+
       - name: Configure
-        run: cmake -S apps/windows -B build/windows -A x64
+        run: cmake -S apps/windows -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+
       - name: Build
-        run: cmake --build build/windows --config Release
-      - name: Assemble application and Qt runtime
-        shell: pwsh
+        run: cmake --build build/windows
+
+      - name: Assemble application folder
+        run: bash apps/windows/packaging/deploy.sh build/windows build/stage
+
+      - name: Self-test with real media (software OpenGL, null audio)
+        env:
+          IBRA_TEST_AO: "null"
+          GALLIUM_DRIVER: llvmpipe
         run: |
-          $stage = Join-Path $PWD 'build\windows\portable'
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          $exe = Get-ChildItem 'build\windows' -Recurse -Filter 'iBRA PLAYER.exe' | Select-Object -First 1
-          if (-not $exe) { throw 'Windows executable not found.' }
-          Copy-Item $exe.FullName $stage
-          & windeployqt --release --no-translations (Join-Path $stage 'iBRA PLAYER.exe')
-          if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
+          # The test copy gets Mesa's software OpenGL because CI machines have no GPU.
+          # Mesa is NOT shipped in the installer.
+          cp -r build/stage build/test
+          for f in $(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -iE '/bin/.*\.dll$'); do cp "$f" build/test/; done
+          for f in build/test/opengl32.dll build/test/libgallium_wgl.dll; do
+            [ -f "$f" ] && ntldd -R "$f" | awk '{print $3}' | tr '\\' '/' | grep -i /ucrt64/bin/ | while read d; do cp -n "$(cygpath -u "$d")" build/test/ 2>/dev/null || true; done
+          done
+          timeout 900 bash apps/windows/packaging/selftest.sh "$(pwd)/build/test/iBRA PLAYER.exe" "$(pwd)/build/selftest"
+          python apps/windows/packaging/check_report.py build/selftest/report/report.json build/selftest/summary.md
+          cat build/selftest/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Portable build
+        run: |
+          rm -rf "build/iBRA PLAYER Portable"
+          cp -r build/stage "build/iBRA PLAYER Portable"
+          printf '; iBRA PLAYER portable mode: settings are stored in the data folder\n' > "build/iBRA PLAYER Portable/portable.ini"
+          mkdir -p build/installer
+          (cd build && zip -qr9 "installer/iBRA PLAYER Portable ${{ steps.ver.outputs.version }}.zip" "iBRA PLAYER Portable")
+
       - name: Install Inno Setup
+        shell: pwsh
         run: choco install innosetup --no-progress -y
-      - name: Build Setup.exe
+
+      - name: Build iBRA PLAYER Setup
         shell: pwsh
         run: |
-          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
-          if (-not (Test-Path $compiler)) { throw 'Inno Setup compiler was not installed.' }
-          & $compiler 'apps/windows/installer.iss'
-          if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed.' }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          $stage = (Resolve-Path 'build\stage').Path
+          $out = (Resolve-Path 'build\installer').Path
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" "/DStageDir=$stage" "/DOutDir=$out" 'apps\windows\packaging\installer.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          Get-ChildItem build\installer
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ibra-player-windows-setup
-          path: build/windows/installer/iBRA-PLAYER-Setup-0.1.0.exe
+          name: iBRA-PLAYER-Windows-${{ steps.ver.outputs.version }}
+          path: build/installer/*
           if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iBRA-PLAYER-selftest-report
+          path: |
+            build/selftest/report/*
+            build/selftest/summary.md
           retention-days: 14
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: iBRA PLAYER ${{ steps.ver.outputs.version }}
+          files: build/installer/*

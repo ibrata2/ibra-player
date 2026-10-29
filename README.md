@@ -1,39 +1,55 @@
 # iBRA PLAYER
 
-A bilingual media player project for **Windows desktop** and **Android**, including adaptive layouts for phones, tablets, and supported in-car media experiences.
+برمجة و تطوير ابراهيم الخزرجي — [Telegram](https://t.me/ibraprogram)
 
-> The project is being built in stages. Features are documented as planned until implemented and verified on real media files and devices.
+A bilingual (Arabic / English) media player for **Windows 10/11 (64-bit)** with a customizable glass interface, plus an Android prototype.
 
-## Product targets
+## Windows desktop player (`apps/windows`)
 
-- **Windows 10/11 (64-bit):** resizable desktop player, keyboard and mouse controls, playlists, subtitles, themes, and installer/portable packaging.
-- **Android:** phone and tablet layouts that adapt to screen size and orientation.
-- **In-car use:** Android Auto media browsing/playback through Android's supported media app interfaces, and a dedicated Android Automotive OS experience where supported. The car interface will prioritize glanceable controls and driving-safe interaction.
+- **Engine:** libmpv (FFmpeg + libass + libplacebo) rendered through the mpv OpenGL render API inside Qt 6. Every control drives the real engine.
+- **Formats:** containers and codecs come from the bundled FFmpeg build. Settings → Codecs shows the live decoder list of the installed build.
+- **Glass themes:** Red & White (default), White, Black, Red & Black, Clear, plus unlimited custom themes made in **Theme Studio** (colors, opacity, frost, reflection, edge, glow, shadow, radius, button size; live preview; import/export `.ibratheme`). Optional Windows 11 acrylic behind the window; the built-in frosted glass is the lightweight fallback.
+- **Player:** custom title bar, File/View/Play/Navigate/Favorites/Help menus, glass control bar with auto-hide, seek preview, A-B loop, 0.25×–4× speed with pitch correction, frame stepping, jump to time, chapters, aspect/zoom/crop/rotate/flip, picture adjustments, screenshots, resume, repeat/shuffle, always on top, full screen, drag & drop.
+- **Subtitles:** SRT, ASS/SSA, VTT, PGS, VobSub and more; auto-load matching files; Arabic shaping and right-to-left text; encoding detection (UTF-8, Windows-1256, ISO-8859-6…); style, position and delay; secondary subtitles; optional OpenSubtitles web search.
+- **Audio:** track selection, WASAPI exclusive mode, bitstream passthrough (AC-3/E-AC-3/DTS/TrueHD), speaker layout, balance, delay, loudness normalisation, output device choice.
+- **Playlists & library:** M3U / M3U8 / PLS open & save, search, drag reorder, recent files, favorites, resume positions, privacy controls.
+- **Windows integration:** single instance, Explorer “Play with iBRA PLAYER” / “Add to playlist” menu, optional file associations (user confirms in Default Apps), global media keys. Everything is per-user; no administrator rights are needed.
+- **Hardware decoding:** automatic (safe) by default with software fallback; D3D11VA, DXVA2, Intel Quick Sync, NVDEC selectable.
 
-## Repository layout
+### Download / build
 
-- `apps/windows` — Windows Qt Multimedia desktop prototype
-- `apps/android` — Android Media3 handheld prototype
-- `shared` — shared product strings, brand assets, and media behavior specifications
-- `docs` — architecture, roadmap, and implementation notes
+Every push to `main` builds on GitHub Actions (Windows, MSYS2 UCRT64), runs a real-media self-test on Windows, and uploads:
 
-The platforms may use native playback and UI components where required for reliability and platform integration, while sharing the iBRA PLAYER identity and product behavior.
+- `iBRA PLAYER Setup <version>.exe` — installer (per-user by default, optional all-users)
+- `iBRA PLAYER Portable <version>.zip` — portable build (settings stored next to the exe)
 
-## Current status
+Pushing a tag such as `v1.0.0` publishes them as a GitHub Release.
 
-The repository now contains initial Windows and Android playback shells for local media, plus project documentation and the selected logo. These are early prototypes: they have **not been built or verified on devices**, and codec coverage, subtitle handling, Android Auto/Automotive integration, adaptive car layouts, themes, and installers are not complete. See [the roadmap](docs/roadmap.md) for staged delivery and [the architecture](docs/architecture.md) for technology boundaries.
+Local build (MSYS2 UCRT64 shell):
 
-## Development principles
+```bash
+pacman -S mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,qt6-base,mpv,ntldd}
+cmake -S apps/windows -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/windows
+bash apps/windows/packaging/deploy.sh build/windows build/stage
+```
 
-- Do not advertise a codec, subtitle format, hardware decoder, or source type as supported until verified on the target platform.
-- Keep media playback, user interface, and preferences separated.
-- Do not upload media names or viewing history without explicit user consent.
-- Keep Android Auto interactions within the media app experiences permitted by Android; provide a dedicated Android Automotive OS interface separately when applicable.
-- Respect all third-party library licenses and document the exact components shipped in release builds.
+The same sources build on Linux with Qt 6.4+ and libmpv 0.37+ (used for development tests).
 
-## Brand
+### Verification
 
-Official product name: **iBRA PLAYER**  
-Repository: **ibra-player**
+`"iBRA PLAYER.exe" --selftest <out-dir> <files…>` plays each file, checks that playback advances and seeking lands, records the engine's media information and saves a screenshot to `report.json`. CI generates test media in H.264, HEVC, AV1, VP8, VP9, MPEG-1/2/4, WMV, FLV, Theora, 4K HDR10 HEVC, MP3, FLAC, WAV, Opus, AAC, ALAC, AC-3, E-AC-3, DTS, TrueHD, WMA and Arabic subtitles, and fails the build if one does not play. See [docs/verification.md](docs/verification.md).
 
-The selected red-and-black play monogram is in [assets/brand/ibra-player.svg](assets/brand/ibra-player.svg).
+### Not supported
+
+- Encrypted commercial Blu-ray / DRM-protected streams.
+- Arbitrary website video URLs (only direct media and streaming URLs such as HLS/DASH/RTSP).
+- DVD menus are basic (mpv/libdvdnav navigation).
+
+## Android (`apps/android`)
+
+Early Media3 prototype; see [docs/roadmap.md](docs/roadmap.md).
+
+## License
+
+GPL-3.0-or-later (required by the bundled GPL build of mpv/FFmpeg). Third-party notices are shipped in the installer.

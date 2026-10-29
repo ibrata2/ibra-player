@@ -4,7 +4,8 @@ Stages are goals, not completed features. Each item becomes supported only after
 
 ## 1. Runnable foundations
 
-- [x] Add initial Windows Qt Multimedia and Android Media3 playback shells for opening a local video.
+- [x] Windows: libmpv-based player with glass themes, Theme Studio, Arabic/English UI, playlists, subtitles, settings, installer and portable build (see docs/verification.md).
+- [x] Add initial Android Media3 playback shell for opening a local video.
 - [x] Set product identity, base project structure, logo, and implementation documentation.
 - [ ] Build both applications with documented toolchains and resolve platform build issues.
 - [ ] Verify local playback and error handling using real files on Windows and Android.

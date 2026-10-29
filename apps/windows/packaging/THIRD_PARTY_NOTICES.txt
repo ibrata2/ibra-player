@@ -1,0 +1,20 @@
+iBRA PLAYER — third-party components
+=====================================
+
+iBRA PLAYER is free software released under the GNU General Public License,
+version 3 or later (see LICENSE.txt). It is built on the following projects.
+Their exact versions are listed in licenses/packages.txt and each package's
+license text is in the licenses folder next to this file.
+
+- mpv / libmpv (GPL-2.0-or-later)            https://mpv.io
+- FFmpeg (GPL build, includes x264/x265 etc.) https://ffmpeg.org
+- libass, HarfBuzz, FriBidi, FreeType          subtitle rendering & Arabic shaping
+- libplacebo, shaderc, SPIRV-Cross             video rendering
+- dav1d, libvpx, libaom, SVT-AV1               AV1 / VP8 / VP9 decoding
+- libbluray, libdvdnav, libdvdread, libcdio    disc playback
+- Qt 6 (LGPL-3.0)                              https://www.qt.io
+- MinGW-w64 runtime, and the MSYS2 UCRT64 packages they depend on
+
+Source code for iBRA PLAYER: https://github.com/ibrata2/ibra-player
+Source code for the MSYS2 packages: https://packages.msys2.org
+No codec is ever downloaded or executed from outside this folder.

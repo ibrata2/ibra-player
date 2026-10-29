@@ -101,6 +101,7 @@ jobs:
         env:
           IBRA_TEST_AO: "null"
           GALLIUM_DRIVER: llvmpipe
+          IBRA_ALLOW_LOCAL_GL: "1"
         run: |
           # The test copy gets Mesa's software OpenGL because CI machines have no GPU.
           # Mesa is NOT shipped in the installer.
@@ -133,6 +134,7 @@ jobs:
       - name: Normal start-up check (splash + main window)
         env:
           GALLIUM_DRIVER: llvmpipe
+          IBRA_ALLOW_LOCAL_GL: "1"
         run: |
           set +e +o pipefail
           log="$(cygpath -u "$APPDATA")/iBRA PLAYER/logs/ibra-player.log"

@@ -77,6 +77,8 @@ static QPixmap splashPixmap() {
 // installed over them can leave it behind, which replaces the GPU driver and
 // makes the player close at start. Rename it away and restart cleanly.
 static bool disableStrayOpenGL() {
+    // CI runners have no GPU; their test copy uses Mesa on purpose.
+    if (GetEnvironmentVariableW(L"IBRA_ALLOW_LOCAL_GL", nullptr, 0) > 0) return false;
     wchar_t exe[MAX_PATH];
     const DWORD n = GetModuleFileNameW(nullptr, exe, MAX_PATH);
     if (n == 0 || n >= MAX_PATH) return false;

@@ -159,6 +159,18 @@ jobs:
           if ! echo "$newlines" | grep -q "main window shown"; then echo "::error::shipped player: main window not shown"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
           if echo "$newlines" | grep -qi "mesa"; then echo "::error::shipped player is using Mesa OpenGL"; exit 1; fi
           echo "Shipped folder starts and stays open."
+          # Upgrade scenario: an old opengl32.dll left in the folder must be disabled automatically
+          cp -r build/stage build/upgrade
+          cp /ucrt64/bin/opengl32.dll build/upgrade/
+          before=$(wc -l < "$log")
+          "build/upgrade/iBRA PLAYER.exe" &
+          sleep 14
+          taskkill //F //IM "iBRA PLAYER.exe" > /dev/null 2>&1
+          newlines=$(tail -n +$((before + 1)) "$log")
+          echo "$newlines"
+          if [ -f build/upgrade/opengl32.dll ]; then echo "::error::stray opengl32.dll was not disabled"; exit 1; fi
+          if ! echo "$newlines" | grep -q "main window shown"; then echo "::error::player did not come up after disabling stray opengl32.dll"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
+          echo "Leftover opengl32.dll is disabled and the player restarts normally."
 
       - name: Portable build
         run: |

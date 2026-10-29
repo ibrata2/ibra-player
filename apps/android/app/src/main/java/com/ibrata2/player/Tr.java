@@ -59,6 +59,7 @@ final class Tr {
         // settings
         p("language", "Language", "اللغة");
         p("theme", "Theme", "المظهر");
+        p("t.system", "Automatic (System)", "تلقائي (حسب النظام)");
         p("t.red-white", "Red & White Glass", "زجاجي أبيض وأحمر");
         p("t.white", "White Glass", "زجاجي أبيض");
         p("t.black", "Black Glass", "زجاجي أسود");

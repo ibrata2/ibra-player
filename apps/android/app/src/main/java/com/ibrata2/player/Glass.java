@@ -25,7 +25,25 @@ final class Glass {
         this.onAccent = onAccent; this.border = border;
     }
 
-    static final String[] IDS = {"red-white", "white", "black", "red-black", "clear"};
+    static final String[] IDS = {"system", "red-white", "white", "black", "red-black", "clear"};
+
+    /** Automatic: follows the device's night mode, with the Android 12+ system accent colour. */
+    static Glass system(android.content.Context ctx) {
+        int night = ctx.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        boolean dark = night != android.content.res.Configuration.UI_MODE_NIGHT_NO;
+        int accent = 0xFFE3192B;
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            try { accent = ctx.getColor(dark ? android.R.color.system_accent1_300 : android.R.color.system_accent1_600); }
+            catch (Exception ignored) { }
+        }
+        int onAccent = (Color.red(accent) * 299 + Color.green(accent) * 587 + Color.blue(accent) * 114) / 1000 > 170 ? 0xFF111111 : 0xFFFFFFFF;
+        int blob = (accent & 0x00FFFFFF) | 0x46000000;
+        return dark
+                ? new Glass("system", true, 0xFF202124, 0xFF0B0B0D, 0x1EFFFFFF, blob, 0xA81C1C1F,
+                        0xFFF3F3F3, 0xFFA0A0A6, accent, onAccent, 0x3DFFFFFF)
+                : new Glass("system", false, 0xFFF5F6F8, 0xFFE1E4EA, 0xDCFFFFFF, blob, 0x99FFFFFF,
+                        0xFF1B1B1F, 0xFF5F6370, accent, onAccent, 0xD8FFFFFF);
+    }
 
     static Glass of(String id) {
         switch (id) {

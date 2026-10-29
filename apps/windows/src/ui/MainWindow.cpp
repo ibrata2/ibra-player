@@ -441,6 +441,11 @@ void MainWindow::buildMenus() {
         connect(menu, &QMenu::aboutToShow, this, [this, menu, which] { menu->clear(); fillMenu(menu, which); });
         fillMenu(menu, which);   // so keyboard accelerators exist before first open
     }
+    // Reserve the menu bar's full width so no item collapses into the "»"
+    // overflow button (Arabic text is wider and RTL layouts trigger it).
+    mb->adjustSize();
+    mb->setMinimumWidth(mb->sizeHint().width() + 12);
+    mb->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 }
 
 void MainWindow::fillMenu(QMenu *menu, const QString &which) {

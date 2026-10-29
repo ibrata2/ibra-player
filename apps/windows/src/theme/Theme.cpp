@@ -1,6 +1,9 @@
 #include "Theme.h"
 #include "core/AppSettings.h"
 #include <QApplication>
+#include <QSettings>
+#include <QStyleHints>
+#include <QGuiApplication>
 #include <QPalette>
 #include <QFile>
 #include <QJsonDocument>
@@ -78,10 +81,62 @@ ThemeManager *ThemeManager::instance() {
     return m;
 }
 
-ThemeManager::ThemeManager() {}
+ThemeManager::ThemeManager() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    // Follow Windows light/dark changes live when the automatic theme is chosen
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] {
+        if (m_current.id == "system") activate(find("system"));
+    });
+#endif
+}
+
+static bool systemIsDark() {
+#ifdef Q_OS_WIN
+    QSettings reg("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", QSettings::NativeFormat);
+    if (reg.contains("AppsUseLightTheme")) return reg.value("AppsUseLightTheme").toInt() == 0;
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+#else
+    return false;
+#endif
+}
+
+static QColor systemAccent() {
+#ifdef Q_OS_WIN
+    QSettings reg("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\DWM", QSettings::NativeFormat);
+    if (reg.contains("AccentColor")) {
+        const quint32 abgr = reg.value("AccentColor").toUInt();
+        QColor c(abgr & 0xff, (abgr >> 8) & 0xff, (abgr >> 16) & 0xff);
+        if (c.isValid()) return c;
+    }
+#endif
+    return QColor("#e3192b");
+}
 
 QVector<Theme> ThemeManager::builtIns() const {
     QVector<Theme> v;
+    {   // Automatic: follows the Windows light/dark mode and accent colour
+        const bool dark = systemIsDark();
+        const QColor acc = systemAccent();
+        Theme t; t.id = "system"; t.nameEn = "Automatic (System)"; t.nameAr = "تلقائي (حسب النظام)"; t.builtIn = true; t.dark = dark;
+        if (dark) {
+            t.bgTop = QColor("#202124"); t.bgBottom = QColor("#0b0b0d");
+            t.blobA = QColor(255, 255, 255, 30); t.blobB = QColor(acc.red(), acc.green(), acc.blue(), 60);
+            t.surface = QColor("#1c1c1f"); t.surfaceOpacity = 66;
+            t.text = QColor("#f3f3f3"); t.textMuted = QColor("#a0a0a6");
+            t.border = QColor("#ffffff"); t.borderOpacity = 24; t.reflection = 30;
+        } else {
+            t.bgTop = QColor("#f5f6f8"); t.bgBottom = QColor("#e1e4ea");
+            t.blobA = QColor(255, 255, 255, 220); t.blobB = QColor(acc.red(), acc.green(), acc.blue(), 50);
+            t.surface = QColor("#ffffff"); t.surfaceOpacity = 60;
+            t.text = QColor("#1b1b1f"); t.textMuted = QColor("#5f6370");
+            t.border = QColor("#ffffff"); t.borderOpacity = 85; t.reflection = 55; t.shadow = 16;
+        }
+        t.accent = acc; t.accentText = acc.lightness() > 170 ? QColor("#111111") : QColor("#ffffff");
+        t.glow = acc; t.glow_ = dark ? 8 : 4;
+        v << t;
+    }
     {   // Black Glass
         Theme t; t.id = "black"; t.nameEn = "Black Glass"; t.nameAr = "زجاجي أسود"; t.builtIn = true; t.dark = true;
         t.bgTop = QColor("#1b1c20"); t.bgBottom = QColor("#060608");
@@ -151,7 +206,8 @@ QVector<Theme> ThemeManager::userThemes() const {
 
 Theme ThemeManager::find(const QString &id) const {
     for (const Theme &t : allThemes()) if (t.id == id) return t;
-    return builtIns()[2];   // Red & White default
+    for (const Theme &t : builtIns()) if (t.id == "red-white") return t;
+    return builtIns().first();
 }
 
 void ThemeManager::apply(const QString &id) {

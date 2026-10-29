@@ -71,7 +71,40 @@ static QPixmap splashPixmap() {
     return pm;
 }
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+// Versions 1.0.0/1.0.1 shipped Mesa's opengl32.dll by mistake; an update
+// installed over them can leave it behind, which replaces the GPU driver and
+// makes the player close at start. Rename it away and restart cleanly.
+static bool disableStrayOpenGL() {
+    wchar_t exe[MAX_PATH];
+    const DWORD n = GetModuleFileNameW(nullptr, exe, MAX_PATH);
+    if (n == 0 || n >= MAX_PATH) return false;
+    std::wstring dir(exe, n);
+    dir = dir.substr(0, dir.find_last_of(L"\\/") + 1);
+    bool moved = false;
+    for (const wchar_t *name : {L"opengl32.dll", L"libgallium_wgl.dll", L"libglapi.dll"}) {
+        const std::wstring f = dir + name;
+        if (GetFileAttributesW(f.c_str()) == INVALID_FILE_ATTRIBUTES) continue;
+        const std::wstring off = f + L".disabled";
+        DeleteFileW(off.c_str());
+        if (MoveFileExW(f.c_str(), off.c_str(), MOVEFILE_REPLACE_EXISTING)) moved = true;
+    }
+    if (!moved) return false;
+    STARTUPINFOW si{}; si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessW(exe, GetCommandLineW(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        CloseHandle(pi.hThread); CloseHandle(pi.hProcess);
+        return true;
+    }
+    return false;
+}
+#endif
+
 int main(int argc, char *argv[]) {
+#ifdef Q_OS_WIN
+    if (disableStrayOpenGL()) return 0;   // the restarted copy runs with the real GPU driver
+#endif
     QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication app(argc, argv);
     QApplication::setApplicationName("iBRA PLAYER");

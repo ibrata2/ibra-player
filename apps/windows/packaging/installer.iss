@@ -72,6 +72,17 @@ Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:Sho
 Name: "contextmenu"; Description: "{cm:ContextMenu}"; GroupDescription: "{cm:Integration}"
 Name: "associations"; Description: "{cm:Associations}"; GroupDescription: "{cm:Integration}"; Flags: unchecked
 
+[InstallDelete]
+; Remove everything a previous version installed (old DLLs such as the
+; mistakenly shipped opengl32.dll must never survive an update).
+Type: filesandordirs; Name: "{app}\*.dll"
+Type: filesandordirs; Name: "{app}\*.disabled"
+Type: filesandordirs; Name: "{app}\platforms"
+Type: filesandordirs; Name: "{app}\imageformats"
+Type: filesandordirs; Name: "{app}\styles"
+Type: filesandordirs; Name: "{app}\tls"
+Type: filesandordirs; Name: "{app}\licenses"
+
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 

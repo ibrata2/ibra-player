@@ -236,7 +236,7 @@ public final class MainActivity extends Activity {
     private int px(float v) { return Math.round(v * dp); }
 
     private void buildUi() {
-        g = Glass.of(prefs.theme());
+        g = "system".equals(prefs.theme()) ? Glass.system(this) : Glass.of(prefs.theme());
         DisplayMetrics m = getResources().getDisplayMetrics();
         dp = m.density;
         float wDp = m.widthPixels / dp, hDp = m.heightPixels / dp;

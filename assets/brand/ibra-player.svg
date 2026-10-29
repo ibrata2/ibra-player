@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">iBRA PLAYER</title>
+  <desc id="desc">Red and black play-button monogram with iBRA PLAYER wordmark</desc>
+  <rect width="512" height="512" rx="96" fill="#fff"/>
+  <path d="M111 74h70v221h-70z" fill="#111"/>
+  <circle cx="146" cy="53" r="27" fill="#ed1c24"/>
+  <path d="M219 79c0-17 18-28 33-20l165 91c19 11 19 38 0 49l-165 91c-15 8-33-3-33-20V79z" fill="#ed1c24"/>
+  <path d="M276 132v84l76-42z" fill="#111"/>
+  <text x="256" y="381" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="45" fill="#111">iBRA PLAYER</text>
+  <circle cx="97" cy="359" r="7" fill="#ed1c24"/>
+</svg>

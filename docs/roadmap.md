@@ -4,9 +4,13 @@ Stages are goals, not completed features. Each item becomes supported only after
 
 ## 1. Runnable foundations
 
-- Establish Windows and Android build projects.
-- Set product identity, app icons, bilingual strings, and basic settings persistence.
-- Create a real playback screen with open-file support and honest error handling.
+- [x] Add initial Windows Qt Multimedia and Android Media3 playback shells for opening a local video.
+- [x] Set product identity, base project structure, logo, and implementation documentation.
+- [ ] Build both applications with documented toolchains and resolve platform build issues.
+- [ ] Verify local playback and error handling using real files on Windows and Android.
+- [ ] Add bilingual interface strings, settings persistence, and release icons.
+
+The checked items above describe source files present in the repository; they are not a claim that either build has passed or that playback has been device-verified.
 
 ## 2. Core playback
 

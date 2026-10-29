@@ -91,15 +91,20 @@ jobs:
         run: |
           # The test copy gets Mesa's software OpenGL because CI machines have no GPU.
           # Mesa is NOT shipped in the installer.
+          set +e +o pipefail
           cp -r build/stage build/test
           for f in $(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -iE '/bin/.*\.dll$'); do cp "$f" build/test/; done
           for f in build/test/opengl32.dll build/test/libgallium_wgl.dll; do
-            [ -f "$f" ] && ntldd -R "$f" | awk '{print $3}' | tr '\\' '/' | grep -i /ucrt64/bin/ | while read d; do cp -n "$(cygpath -u "$d")" build/test/ 2>/dev/null || true; done
+            if [ -f "$f" ]; then
+              for d in $(ntldd -R "$f" 2>/dev/null | awk '{print $3}' | tr '\\' '/' | grep -i /ucrt64/bin/); do
+                cp -n "$(cygpath -u "$d")" build/test/ 2>/dev/null
+              done
+            fi
           done
+          echo "test folder: $(ls build/test | wc -l) files"
           set +e
           timeout 900 bash apps/windows/packaging/selftest.sh "$(pwd)/build/test/iBRA PLAYER.exe" "$(pwd)/build/selftest" > selftest.log 2>&1
           code=$?
-          set -e
           if [ ! -f build/selftest/report/report.json ]; then
             echo "::error::selftest exit=$code, no report"
             tail -25 selftest.log | sed 's/^/::error::LOG /'

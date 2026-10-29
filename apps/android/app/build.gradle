@@ -10,8 +10,8 @@ android {
         applicationId 'com.ibrata2.player'
         minSdk 23
         targetSdk 35
-        versionCode 12
-        versionName '1.0.3'
+        versionCode 13
+        versionName '1.0.4'
     }
 
     buildTypes {

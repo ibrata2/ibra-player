@@ -123,8 +123,14 @@ public final class MainActivity extends Activity {
     private Bitmap lastArt;
     private String lastArtId;
 
+    private TextView lastKeyView;
     private final Runnable ticker = new Runnable() {
-        @Override public void run() { updateProgress(); ui.postDelayed(this, 500); }
+        @Override public void run() {
+            updateProgress();
+            if (lastKeyView != null && lastKeyView.isAttachedToWindow() && !KeyBus.lastEvent.isEmpty())
+                lastKeyView.setText(KeyBus.lastEvent);
+            ui.postDelayed(this, 500);
+        }
     };
     private final Runnable hideControls = () -> setControlsVisible(false);
 
@@ -1023,18 +1029,26 @@ public final class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------ keys (steering wheel, remote, rotary)
+    @Override protected void onResume() { super.onResume(); KeyBus.uiVisible = true; }
+    @Override protected void onPause() { KeyBus.uiVisible = false; super.onPause(); }
+
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
         int code = e.getKeyCode();
-        if (learnDialog != null && learnDialog.isShowing()) {
-            if (e.getAction() == KeyEvent.ACTION_DOWN && code != KeyEvent.KEYCODE_BACK) { onKeyLearned(code); }
+        if (KeyBus.learn != null) {
+            if (code == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) KeyBus.report(code, "key event");
             return true;
         }
         Map<Integer, String> map = prefs.keyMap();
         String action = map.get(code);
         if (action != null && controller != null) {
-            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) act(action);
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+                KeyBus.lastEvent = KeyBus.name(code) + "  ·  key event";
+                act(action);
+            }
             return true;
         }
+        if (e.getAction() == KeyEvent.ACTION_DOWN) KeyBus.lastEvent = KeyBus.name(code) + "  ·  key event";
         if (playerVisible && e.getAction() == KeyEvent.ACTION_DOWN) setControlsVisible(true);
         return super.dispatchKeyEvent(e);
     }
@@ -1045,16 +1059,18 @@ public final class MainActivity extends Activity {
         msg.setPadding(px(24), px(40), px(24), px(40));
         learnDialog = new AlertDialog.Builder(this, dialogTheme()).setTitle(Tr.t("learn")).setView(msg)
                 .setNegativeButton(Tr.t("close"), null).create();
+        learnDialog.setOnDismissListener(d -> KeyBus.learn = null);
+        KeyBus.learn = (code, source) -> onKeyLearned(code, source);
         learnDialog.show();
     }
 
-    private void onKeyLearned(int code) {
-        learnDialog.dismiss();
-        learnDialog = null;
+    private void onKeyLearned(int code, String source) {
+        KeyBus.learn = null;
+        if (learnDialog != null) { learnDialog.dismiss(); learnDialog = null; }
         String[] labels = new String[Prefs.ACTIONS.length];
         for (int i = 0; i < labels.length; i++) labels[i] = Tr.t("a." + Prefs.ACTIONS[i]);
         new AlertDialog.Builder(this, dialogTheme())
-                .setTitle(Tr.t("chooseAction") + "  (" + KeyEvent.keyCodeToString(code).replace("KEYCODE_", "") + ")")
+                .setTitle(Tr.t("chooseAction") + "\n" + KeyBus.name(code) + "  (" + source + ")")
                 .setItems(labels, (d, w) -> { prefs.setKey(code, Prefs.ACTIONS[w]); showSettings(); })
                 .show();
     }
@@ -1100,6 +1116,26 @@ public final class MainActivity extends Activity {
         kb.addView(button(Tr.t("learn"), true, v -> startLearning()));
         kb.addView(button(Tr.t("resetKeys"), false, v -> { prefs.resetKeys(); showSettings(); }));
         keys.addView(kb);
+
+        // Global capture through accessibility (works with units that only send keys to the app in front)
+        boolean acc = KeyCaptureService.isEnabled(this);
+        TextView accState = text(Tr.t("globalCapture") + ": " + Tr.t(acc ? "enabled" : "disabled"), 16, acc ? g.accent : g.text, true);
+        accState.setPadding(0, px(14), 0, px(2));
+        keys.addView(accState);
+        keys.addView(text(Tr.t("globalCaptureHint"), 13, g.muted, false));
+        keys.addView(button(Tr.t(acc ? "globalCaptureManage" : "globalCaptureEnable"), !acc, v -> {
+            try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
+            catch (Exception ex) { toast(Tr.t("globalCaptureHint")); }
+            toast(Tr.t("globalCaptureFind"));
+        }));
+
+        // Live button test: shows the last button and the channel it came through
+        TextView testTitle = text(Tr.t("buttonTest"), 16, g.text, true);
+        testTitle.setPadding(0, px(14), 0, px(2));
+        keys.addView(testTitle);
+        lastKeyView = text(KeyBus.lastEvent.isEmpty() ? Tr.t("pressAny") : KeyBus.lastEvent, 18, g.accent, true);
+        keys.addView(lastKeyView);
+        keys.addView(text(Tr.t("unitTip"), 13, g.muted, false));
 
         LinearLayout play = section(col, Tr.t("playback"));
         play.addView(toggle(Tr.t("resumeOnOpen"), "resumeOnOpen", true));

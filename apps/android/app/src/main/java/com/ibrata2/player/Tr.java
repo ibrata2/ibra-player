@@ -83,6 +83,18 @@ final class Tr {
         p("a.shuffle", "Shuffle on/off", "تشغيل/إيقاف العشوائي");
         p("a.openPlayer", "Open player", "فتح المشغّل");
         p("a.ignore", "Do nothing", "لا شيء");
+        p("globalCapture", "Global button capture", "التقاط الأزرار من أي مكان");
+        p("enabled", "On", "مفعّل");
+        p("disabled", "Off", "غير مفعّل");
+        p("globalCaptureHint", "If the steering wheel buttons do nothing in iBRA PLAYER, turn this on: Settings → Accessibility → iBRA PLAYER → On. Buttons are only taken while iBRA PLAYER is the player you are using; radio and other apps keep their buttons. On Android 13+ you may first need App info → ⋮ → Allow restricted settings.",
+                "إذا أزرار الدركسون ما تشتغل ويه iBRA PLAYER فعّل هذا: الإعدادات ← إمكانية الوصول ← iBRA PLAYER ← تشغيل. البرنامج ياخذ الأزرار فقط وقت يكون هو المشغّل المستخدم، والراديو وباقي التطبيقات تبقى أزرارها تشتغل. بأندرويد 13 وأحدث قد تحتاج أولاً: معلومات التطبيق ← ⋮ ← السماح بالإعدادات المقيّدة.");
+        p("globalCaptureEnable", "Turn on global capture", "تفعيل الالتقاط من أي مكان");
+        p("globalCaptureManage", "Accessibility settings", "إعدادات إمكانية الوصول");
+        p("globalCaptureFind", "Find iBRA PLAYER in the list and turn it on", "دوّر على iBRA PLAYER بالقائمة وفعّله");
+        p("buttonTest", "Button test (last button received)", "فحص الأزرار (آخر زر وصل)");
+        p("pressAny", "Press any steering wheel button…", "اضغط أي زر بالدركسون…");
+        p("unitTip", "If nothing appears here when you press a button, the unit sends it only to its own music app. Look in the unit's settings for an option like \"steering wheel for 3rd-party apps\" or \"media app\" and choose iBRA PLAYER, then turn on global capture above.",
+                "إذا ما يطلع شي هنا لما تضغط الزر، فالجهاز يرسله لتطبيق الموسيقى مالته بس. دوّر بإعدادات الجهاز على خيار مثل \"الدركسون للتطبيقات الخارجية\" أو \"تطبيق الوسائط\" واختار iBRA PLAYER، وبعدين فعّل الالتقاط من أي مكان فوق.");
         p("playback", "Playback", "التشغيل");
         p("resumeOnOpen", "Continue the last media when the app opens", "متابعة آخر ملف عند فتح البرنامج");
         p("rememberPos", "Remember the position of each file", "تذكّر موضع كل ملف");

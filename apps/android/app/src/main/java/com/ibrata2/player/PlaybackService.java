@@ -59,12 +59,65 @@ public final class PlaybackService extends MediaSessionService {
         }
     };
 
-    /** AOSP music-service broadcast used by many Chinese head units for steering-wheel keys. */
+    private static PlaybackService instance;
+
+    /** True when iBRA PLAYER is the player the user is currently using. */
+    static boolean isActivePlayer() {
+        PlaybackService s = instance;
+        return s != null && s.player != null && s.player.getMediaItemCount() > 0
+                && (s.player.getPlayWhenReady() || KeyBus.uiVisible
+                    || android.os.SystemClock.elapsedRealtime() - s.lastActive < 10 * 60_000);
+    }
+
+    /** Runs a steering-wheel action on the player (main thread). */
+    static boolean runAction(Context ctx, String action) {
+        if ("openPlayer".equals(action)) {
+            try {
+                ctx.startActivity(new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) { }
+            return true;
+        }
+        PlaybackService s = instance;
+        if (s == null || s.player == null || s.player.getMediaItemCount() == 0) return false;
+        perform(s.player, action);
+        return true;
+    }
+
+    private long lastActive;
+
+    /**
+     * Steering-wheel channels used by different head-unit makers:
+     *  - AOSP music service commands (many Chinese units)
+     *  - plain MEDIA_BUTTON broadcasts (some MCU bridges send them unordered)
+     *  - Microntek / MTC units: com.microntek.irkeyDown with an int "keyCode"
+     *  - com.ibrata2.player.ACTION with extra "action" for key-mapping apps
+     */
     private final BroadcastReceiver legacyCommands = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
+            String act = i.getAction();
+            if (act == null || player == null) return;
+            if (Intent.ACTION_MEDIA_BUTTON.equals(act)) {
+                KeyEvent ev = Build.VERSION.SDK_INT >= 33
+                        ? i.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent.class)
+                        : i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                if (ev != null && ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0
+                        && KeyBus.dispatch(c, ev.getKeyCode(), "media-button broadcast") && isOrderedBroadcast()) abortBroadcast();
+                return;
+            }
+            if (act.startsWith("com.microntek.irkey")) {
+                if (!act.endsWith("Down")) return;
+                int k = i.getIntExtra("keyCode", i.getIntExtra("keycode", -1));
+                if (k >= 0) KeyBus.dispatch(c, KeyBus.MTC_BASE + k, "MTC broadcast");
+                return;
+            }
+            if ("com.ibrata2.player.ACTION".equals(act)) {
+                String a = i.getStringExtra("action");
+                if (a != null) { KeyBus.lastEvent = a + "  ·  intent"; runAction(c, a); }
+                return;
+            }
             String cmd = i.getStringExtra("command");
-            if (cmd == null) cmd = i.getAction();
-            if (cmd == null || player == null) return;
+            if (cmd == null) cmd = act;
+            KeyBus.lastEvent = cmd + "  ·  music command";
             if (cmd.endsWith("next")) perform(player, "next");
             else if (cmd.endsWith("previous")) perform(player, "previous");
             else if (cmd.endsWith("togglepause")) perform(player, "playPause");
@@ -77,6 +130,7 @@ public final class PlaybackService extends MediaSessionService {
     @Override public void onCreate() {
         super.onCreate();
         prefs = new Prefs(this);
+        instance = this;
         DefaultRenderersFactory renderers = new DefaultRenderersFactory(this)
                 // Prefer the unit's own decoders, fall back to FFmpeg for AC-3/DTS/TrueHD etc.
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -98,7 +152,10 @@ public final class PlaybackService extends MediaSessionService {
                 boolean video = item.mediaMetadata.extras != null && item.mediaMetadata.extras.getBoolean(EXTRA_VIDEO);
                 prefs.addRecent(item.mediaId, t == null ? "" : t.toString(), video);
             }
-            @Override public void onIsPlayingChanged(boolean playing) { saveState(); }
+            @Override public void onIsPlayingChanged(boolean playing) {
+                lastActive = android.os.SystemClock.elapsedRealtime();
+                saveState();
+            }
         });
 
         Intent open = new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -115,6 +172,11 @@ public final class PlaybackService extends MediaSessionService {
         f.addAction("com.android.music.musicservicecommand.previous");
         f.addAction("com.android.music.musicservicecommand.togglepause");
         f.addAction("com.android.music.musicservicecommand.pause");
+        f.addAction("com.android.music.musicservicecommand.play");
+        f.addAction(Intent.ACTION_MEDIA_BUTTON);
+        f.addAction("com.microntek.irkeyDown");
+        f.addAction("com.ibrata2.player.ACTION");
+        f.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY - 1);
         ContextCompat.registerReceiver(this, legacyCommands, f, ContextCompat.RECEIVER_EXPORTED);
         handler.postDelayed(saver, 5000);
     }
@@ -127,6 +189,7 @@ public final class PlaybackService extends MediaSessionService {
     }
 
     @Override public void onDestroy() {
+        if (instance == this) instance = null;
         saveState();
         handler.removeCallbacks(saver);
         try { unregisterReceiver(legacyCommands); } catch (Exception ignored) { }
@@ -233,16 +296,17 @@ public final class PlaybackService extends MediaSessionService {
                     ? intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent.class)
                     : intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
             if (ev == null) return false;
-            Map<Integer, String> map = prefs.keyMap();
-            String action = map.get(ev.getKeyCode());
-            if (action == null) return false;
+            int code = ev.getKeyCode();
+            if (KeyBus.learn != null) {
+                if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0) KeyBus.report(code, "media session");
+                return true;
+            }
+            String action = prefs.keyMap().get(code);
+            if (action == null) return false;          // let Media3 handle anything else
             if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0) {
-                if ("openPlayer".equals(action)) {
-                    Intent i = new Intent(PlaybackService.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    try { startActivity(i); } catch (Exception ignored) { }
-                } else if (!"ignore".equals(action)) {
-                    perform(player, action);
-                }
+                KeyBus.lastEvent = KeyBus.name(code) + "  ·  media session";
+                lastActive = android.os.SystemClock.elapsedRealtime();
+                if (!"ignore".equals(action)) runAction(PlaybackService.this, action);
             }
             return true;
         }

@@ -1,0 +1,4 @@
+<resources>
+    <string name="key_capture_label">iBRA PLAYER – أزرار الدركسون</string>
+    <string name="key_capture_description">يستقبل أزرار الدركسون والريموت ويوجّهها إلى iBRA PLAYER فقط عندما يكون هو المشغّل المستخدم. لا يقرأ محتوى الشاشة ولا يجمع أي بيانات. / Receives steering-wheel and remote buttons for iBRA PLAYER only while it is the player in use. It does not read screen content or collect any data.</string>
+</resources>

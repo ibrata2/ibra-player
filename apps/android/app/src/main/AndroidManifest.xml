@@ -2,7 +2,8 @@
     <application
         android:allowBackup="false"
         android:label="iBRA PLAYER"
-        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:icon="@drawable/ic_launcher"
+        android:theme="@style/AppTheme"
         android:supportsRtl="true">
         <activity
             android:name=".MainActivity"
@@ -20,3 +21,4 @@
         </activity>
     </application>
 </manifest>
+

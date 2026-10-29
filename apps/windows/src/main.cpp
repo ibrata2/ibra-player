@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QAudioOutput>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -52,7 +53,10 @@ public:
             player->play();
             time->setText(path);
         });
-        connect(play, &QPushButton::clicked, player, &QMediaPlayer::play);
+        connect(play, &QPushButton::clicked, this, [this] {
+            if (player->playbackState() == QMediaPlayer::PlayingState) player->pause();
+            else player->play();
+        });
         connect(stop, &QPushButton::clicked, player, &QMediaPlayer::stop);
         connect(volume, &QSlider::valueChanged, this, [this](int value) {
             audio->setVolume(value / 100.0);

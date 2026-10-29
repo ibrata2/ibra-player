@@ -31,7 +31,7 @@ jobs:
           retention-days: 14
 
   windows:
-    name: Windows portable package
+    name: Windows setup installer
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
         run: cmake -S apps/windows -B build/windows -A x64
       - name: Build
         run: cmake --build build/windows --config Release
-      - name: Assemble portable directory
+      - name: Assemble application and Qt runtime
         shell: pwsh
         run: |
           $stage = Join-Path $PWD 'build\windows\portable'
@@ -57,11 +57,18 @@ jobs:
           Copy-Item $exe.FullName $stage
           & windeployqt --release --no-translations (Join-Path $stage 'iBRA PLAYER.exe')
           if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
-          Set-Content -Path (Join-Path $stage 'README.txt') -Value 'Extract the complete folder and run iBRA PLAYER.exe. Keep all included Qt DLLs and plugins beside it.'
-          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath (Join-Path $PWD 'build\windows\iBRA-PLAYER-Windows-Portable.zip') -Force
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Build Setup.exe
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $compiler)) { throw 'Inno Setup compiler was not installed.' }
+          & $compiler 'apps/windows/installer.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed.' }
       - uses: actions/upload-artifact@v4
         with:
-          name: ibra-player-windows-portable
-          path: build/windows/iBRA-PLAYER-Windows-Portable.zip
+          name: ibra-player-windows-setup
+          path: build/windows/installer/iBRA-PLAYER-Setup-0.1.0.exe
           if-no-files-found: error
           retention-days: 14

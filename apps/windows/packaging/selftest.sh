@@ -47,6 +47,16 @@ mk $S -c:a dca -strict -2 a06.dts
 mk $S -c:a truehd -strict -2 a07_truehd.mka
 mk $S -c:a wmav2 a08.wma
 mk $S -c:a libopencore_amrnb -ar 8000 -ac 1 -b:a 12.2k a09.amr
+# Drop any generated file that FFmpeg itself cannot decode (encoder problem on
+# the build machine, not a player problem) so the test stays meaningful.
+for f in v* a*; do
+  [ -f "$f" ] || continue
+  case "$f" in *.srt) continue ;; esac
+  if ! ffmpeg -v error -xerror -i "$f" -t 2 -f null - > /dev/null 2>&1; then
+    echo "test file $f is not decodable by ffmpeg itself; skipping it"
+    rm -f "$f"
+  fi
+done
 head -c 60000 /dev/urandom > z_corrupt.mkv
 ls -la
 

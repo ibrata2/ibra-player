@@ -1,6 +1,6 @@
 # iBRA PLAYER
 
-A bilingual media player project for **Windows desktop** and **Android**, including responsive layouts for phones, tablets, and supported in-car media experiences.
+A bilingual media player project for **Windows desktop** and **Android**, including adaptive layouts for phones, tablets, and supported in-car media experiences.
 
 > The project is being built in stages. Features are documented as planned until implemented and verified on real media files and devices.
 
@@ -12,8 +12,8 @@ A bilingual media player project for **Windows desktop** and **Android**, includ
 
 ## Repository layout
 
-- `apps/windows` — Windows desktop player
-- `apps/android` — Android player and supported in-car integrations
+- `apps/windows` — Windows Qt Multimedia desktop prototype
+- `apps/android` — Android Media3 handheld prototype
 - `shared` — shared product strings, brand assets, and media behavior specifications
 - `docs` — architecture, roadmap, and implementation notes
 
@@ -21,7 +21,7 @@ The platforms may use native playback and UI components where required for relia
 
 ## Current status
 
-This repository contains the initial project foundation and implementation plan. It does **not yet** contain a playable application or installer. See [the roadmap](docs/roadmap.md) for staged delivery and [the architecture](docs/architecture.md) for technology boundaries.
+The repository now contains initial Windows and Android playback shells for local media, plus project documentation and the selected logo. These are early prototypes: they have **not been built or verified on devices**, and codec coverage, subtitle handling, Android Auto/Automotive integration, adaptive car layouts, themes, and installers are not complete. See [the roadmap](docs/roadmap.md) for staged delivery and [the architecture](docs/architecture.md) for technology boundaries.
 
 ## Development principles
 

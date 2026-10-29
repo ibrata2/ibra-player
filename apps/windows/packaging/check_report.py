@@ -19,6 +19,8 @@ for r in report:
         continue
     if not r.get("loaded") or not r.get("playing"):
         failed.append(name)
+    elif not r.get("windowVisible") or not r.get("videoSurface"):
+        failed.append(name + " (window not visible / no video surface)")
 
 table = "\n".join(["| File | Loaded | Playing | Advanced | Video | Audio | Decoder | Error |",
                    "|---|---|---|---|---|---|---|---|"] + rows)

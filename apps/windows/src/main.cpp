@@ -145,12 +145,20 @@ int main(int argc, char *argv[]) {
         });
     }
 
+    // Only the main window's own close quits the app: a splash screen closing
+    // must never end the program.
+    QApplication::setQuitOnLastWindowClosed(false);
     w.show();
-#ifdef Q_OS_WIN
-    Platform::setRoundedCorners(&w);
-    if (settings->boolValue("ui/windowBackdrop"))
-        Platform::setWindowBackdrop(&w, true, ThemeManager::instance()->current().dark);
-#endif
+    w.raise();
+    w.activateWindow();
+    QTimer::singleShot(2500, &w, [&w] {
+        if (!w.isVisible() || w.isMinimized()) {
+            Log::write("warn", "main window was not visible after start; showing it again");
+            w.showNormal();
+            w.raise();
+            w.activateWindow();
+        }
+    });
     if (splash) QTimer::singleShot(700, splash, [splash, &w] { splash->finish(&w); splash->deleteLater(); });
 
     if (selfTest >= 0) {

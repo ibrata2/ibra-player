@@ -1,6 +1,7 @@
 #include "MpvWidget.h"
 
 #include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QMetaObject>
 #include <QFileInfo>
 #include <QDir>
@@ -210,11 +211,18 @@ void MpvWidget::initializeGL() {
         {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &glInit},
         {MPV_RENDER_PARAM_INVALID, nullptr}};
     if (mpv_render_context_create(&m_gl, m_mpv, params) < 0) {
-        m_lastError = QStringLiteral("OpenGL render context could not be created");
+        m_lastError = QStringLiteral("OpenGL render context could not be created (update the graphics driver)");
         emit playbackError(m_lastError);
         return;
     }
     mpv_render_context_set_update_callback(m_gl, &MpvWidget::onUpdate, this);
+    if (auto *ctx = QOpenGLContext::currentContext()) {
+        auto *f = ctx->functions();
+        emit logMessage("info", QString("OpenGL: %1 / %2 / %3").arg(
+            reinterpret_cast<const char *>(f->glGetString(GL_VENDOR)),
+            reinterpret_cast<const char *>(f->glGetString(GL_RENDERER)),
+            reinterpret_cast<const char *>(f->glGetString(GL_VERSION))));
+    }
 }
 
 void MpvWidget::paintGL() {

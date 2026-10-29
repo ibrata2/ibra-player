@@ -116,6 +116,21 @@ jobs:
           python apps/windows/packaging/check_report.py build/selftest/report/report.json build/selftest/summary.md || { grep -E "FAILED|\| no" build/selftest/summary.md | head -20 | sed 's/^/::error::/'; exit 1; }
           cat build/selftest/summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Normal start-up check (splash + main window)
+        env:
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          set +e +o pipefail
+          log="$(cygpath -u "$APPDATA")/iBRA PLAYER/logs/ibra-player.log"
+          before=$(wc -l < "$log" 2>/dev/null || echo 0)
+          timeout 12 "build/test/iBRA PLAYER.exe"
+          code=$?
+          newlines=$(tail -n +$((before + 1)) "$log")
+          echo "$newlines"
+          if [ $code -ne 124 ]; then echo "::error::player exited by itself (code $code) instead of staying open"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
+          if ! echo "$newlines" | grep -q "main window shown.*video surface ready"; then echo "::error::main window/video surface not ready"; echo "$newlines" | sed 's/^/::error::APP /'; exit 1; fi
+          echo "Player started normally and stayed open."
+
       - name: Portable build
         run: |
           rm -rf "build/iBRA PLAYER Portable"

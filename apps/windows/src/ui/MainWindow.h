@@ -62,6 +62,7 @@ public:
 protected:
     bool eventFilter(QObject *o, QEvent *e) override;
     void closeEvent(QCloseEvent *e) override;
+    void showEvent(QShowEvent *e) override;
     void changeEvent(QEvent *e) override;
     void dragEnterEvent(QDragEnterEvent *e) override;
     void dropEvent(QDropEvent *e) override;
@@ -146,6 +147,7 @@ private:
     QTimer m_hideTimer, m_osdTimer, m_resumeTimer;
     bool m_fullscreen = false, m_wasMaximized = false;
     bool m_pendingPlay = false;
+    bool m_nativeReady = false;
     bool m_hflip = false, m_vflip = false;
     int m_rotation = 0;
     double m_zoom = 0;

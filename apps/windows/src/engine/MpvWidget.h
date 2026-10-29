@@ -72,6 +72,7 @@ public:
     QList<MediaTrack> tracks() const { return m_tracks; }
     QString currentPath() const { return m_path; }
     QString lastError() const { return m_lastError; }
+    bool isRenderReady() const { return m_gl != nullptr; }
     QJsonObject mediaInfo() const;     // snapshot for info panel / self-test
 
 signals:

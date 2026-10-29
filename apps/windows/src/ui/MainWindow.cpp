@@ -406,7 +406,8 @@ void MainWindow::retranslate() {
 
 void MainWindow::retheme() {
     const Theme &t = ThemeManager::instance()->current();
-    Platform::setDarkTitle(this, t.dark);
+    // Never touch the native window before it is shown (see showEvent)
+    if (m_nativeReady) Platform::setDarkTitle(this, t.dark);
     const QColor c = t.text;
     m_actions["open_file"]->setIcon(Icons::make("open", c));
     m_actions["open_folder"]->setIcon(Icons::make("folder", c));
@@ -1347,7 +1348,7 @@ void MainWindow::applySettings(const QString &key) {
         if (ThemeManager::instance()->current().id != s->stringValue("ui/theme")) ThemeManager::instance()->apply(s->stringValue("ui/theme"));
     if (key.isEmpty() || key.startsWith("video/") || key.startsWith("audio/") || key.startsWith("sub/") || key.startsWith("play/"))
         applyEngineSettings();
-    if (key.isEmpty() || key == "ui/mediaKeys" || key == "ui/globalMediaKeys")
+    if (m_nativeReady && (key.isEmpty() || key == "ui/mediaKeys" || key == "ui/globalMediaKeys"))
         m_mediaKeys->setEnabled(s->raw()->value("ui/globalMediaKeys", true).toBool(), this);
     if (key == "ui/alwaysOnTop" && bool(windowFlags() & Qt::WindowStaysOnTopHint) != s->boolValue("ui/alwaysOnTop"))
         setAlwaysOnTop(s->boolValue("ui/alwaysOnTop"));
@@ -1541,6 +1542,24 @@ void MainWindow::changeEvent(QEvent *e) {
     QWidget::changeEvent(e);
 }
 
+void MainWindow::showEvent(QShowEvent *e) {
+    QWidget::showEvent(e);
+    if (m_nativeReady) return;
+    // The native window exists (with its OpenGL surface) only now. Calling
+    // winId() earlier forces Qt to recreate the window when the video widget
+    // attaches, which can leave it hidden on Windows.
+    m_nativeReady = true;
+    QTimer::singleShot(0, this, [this] {
+        AppSettings *s = AppSettings::instance();
+        Platform::setRoundedCorners(this);
+        Platform::setDarkTitle(this, ThemeManager::instance()->current().dark);
+        if (s->boolValue("ui/windowBackdrop")) Platform::setWindowBackdrop(this, true, ThemeManager::instance()->current().dark);
+        m_mediaKeys->setEnabled(s->raw()->value("ui/globalMediaKeys", true).toBool(), this);
+        Log::write("info", QString("main window shown %1x%2, video surface %3")
+                               .arg(width()).arg(height()).arg(m_mpv->isRenderReady() ? "ready" : "NOT ready"));
+    });
+}
+
 void MainWindow::closeEvent(QCloseEvent *e) {
     saveResume();
     QSettings *s = AppSettings::instance()->raw();
@@ -1551,6 +1570,7 @@ void MainWindow::closeEvent(QCloseEvent *e) {
     Library::instance()->save();
     m_mpv->stop();
     e->accept();
+    qApp->quit();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *e) {
@@ -1604,6 +1624,8 @@ void MainWindow::runSelfTest(const QStringList &files, const QString &outDir) {
         disconnect(c1);
         disconnect(c2);
         r["loaded"] = loaded;
+        r["windowVisible"] = isVisible() && windowHandle() && windowHandle()->isExposed();
+        r["videoSurface"] = m_mpv->isRenderReady();
         if (!loaded) {
             r["error"] = failed ? error : QString("timeout");
             results.append(r);

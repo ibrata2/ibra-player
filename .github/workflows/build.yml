@@ -66,10 +66,20 @@ jobs:
           echo "iBRA PLAYER $v"
 
       - name: Configure
-        run: cmake -S apps/windows -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: |
+          if ! cmake -S apps/windows -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release > configure.log 2>&1; then
+            cat configure.log
+            grep -iE "error|not found|could not|missing" configure.log | head -20 | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Build
-        run: cmake --build build/windows
+        run: |
+          if ! cmake --build build/windows > build.log 2>&1; then
+            cat build.log
+            grep -iE "error" build.log | head -20 | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Assemble application folder
         run: bash apps/windows/packaging/deploy.sh build/windows build/stage

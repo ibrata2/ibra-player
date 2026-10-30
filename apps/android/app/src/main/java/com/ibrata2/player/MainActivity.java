@@ -90,7 +90,7 @@ public final class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private ListenableFuture<MediaController> controllerFuture;
     private MediaController controller;
-    private boolean scanned, scanning, pendingAutoplay;
+    private boolean scanned, scanning, pendingAutoplay, hadFullAccess;
     private Uri pendingViewUri;
 
     // shell
@@ -223,11 +223,21 @@ public final class MainActivity extends Activity {
     private void scan() {
         if (scanning) return;
         scanning = true;
-        header.setText(Tr.t("rescan") + "…");
+        header.setText(Tr.t("scanning"));
+        MediaRepo.progress = 0;
+        Runnable tick = new Runnable() {
+            @Override public void run() {
+                if (!scanning) return;
+                header.setText(Tr.t("scanning") + "  " + MediaRepo.progress);
+                ui.postDelayed(this, 400);
+            }
+        };
+        ui.postDelayed(tick, 400);
         io.execute(() -> {
             MediaRepo fresh = new MediaRepo();
             fresh.scan(this);
             ui.post(() -> {
+                hadFullAccess = MediaRepo.hasFullAccess(this);
                 repo.videos.clear(); repo.videos.addAll(fresh.videos);
                 repo.music.clear(); repo.music.addAll(fresh.music);
                 repo.folders.clear(); repo.folders.addAll(fresh.folders);
@@ -461,7 +471,8 @@ public final class MainActivity extends Activity {
                     List<MediaRepo.Item> fs = MediaRepo.filter(openFolder.items, query);
                     for (int i = 0; i < fs.size(); i++) rows.add(Row.item(fs.get(i), fs, i, false));
                 } else {
-                    title = Tr.t("folders");
+                    title = Tr.t("folders") + "  (" + repo.folders.size() + ")";
+                    if (!MediaRepo.hasFullAccess(this)) rows.add(Row.grant());
                     for (MediaRepo.Folder f : repo.folders)
                         if (query.isEmpty() || f.name.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) rows.add(Row.folder(f));
                 }
@@ -509,6 +520,8 @@ public final class MainActivity extends Activity {
         }
         static Row folder(MediaRepo.Folder f) { Row r = new Row(); r.folder = f; return r; }
         static Row back() { Row r = new Row(); r.back = true; return r; }
+        boolean grant;
+        static Row grant() { Row r = new Row(); r.grant = true; return r; }
     }
 
     private final class RowAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -574,6 +587,14 @@ public final class MainActivity extends Activity {
             img.setBackground(g.pill(g.field(), px(10)));
             int pad = r.card ? px(30) : px(14);
             img.setPadding(pad, pad, pad, pad);
+            if (r.grant) {
+                img.setImageDrawable(new Icon("folder", g.onAccent));
+                img.setBackground(g.pill(g.accent, px(10)));
+                t1.setText(Tr.t("grantAll"));
+                t2.setText(Tr.t("grantAllHint"));
+                h.itemView.setOnClickListener(v -> requestAllFiles());
+                return;
+            }
             if (r.back) {
                 img.setImageDrawable(new Icon("back", g.text));
                 t1.setText(Tr.t("back"));
@@ -584,7 +605,8 @@ public final class MainActivity extends Activity {
             if (r.folder != null) {
                 img.setImageDrawable(new Icon("folder", g.accent));
                 t1.setText(r.folder.name);
-                t2.setText(String.format(Locale.getDefault(), Tr.t("items"), r.folder.items.size()));
+                String vol = TextUtils.isEmpty(r.folder.volume) ? "" : "  ·  " + r.folder.volume;
+                t2.setText(String.format(Locale.getDefault(), Tr.t("items"), r.folder.items.size()) + vol);
                 h.itemView.setOnClickListener(v -> { openFolder = r.folder; refreshList(); list.scrollToPosition(0); });
                 return;
             }
@@ -594,7 +616,7 @@ public final class MainActivity extends Activity {
             String dur = it.duration > 0 ? time(it.duration) : "";
             t2.setText(TextUtils.isEmpty(it.sub) ? dur : (dur.isEmpty() ? it.sub : dur + "  ·  " + it.sub));
             h.itemView.setOnClickListener(v -> play(r.queue, r.index));
-            if (it.id > 0) {
+            if (it.id > 0 || it.path != null) {
                 img.setTag(it.uri);
                 io.execute(() -> {
                     Bitmap b = MediaRepo.thumbnail(MainActivity.this, it, r.card ? 384 : 160, r.card ? 216 : 160);
@@ -1029,7 +1051,12 @@ public final class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------ keys (steering wheel, remote, rotary)
-    @Override protected void onResume() { super.onResume(); KeyBus.uiVisible = true; }
+    @Override protected void onResume() {
+        super.onResume();
+        KeyBus.uiVisible = true;
+        // Rescan once the user comes back after granting "all files" access
+        if (scanned && !hadFullAccess && MediaRepo.hasFullAccess(this)) scan();
+    }
     @Override protected void onPause() { KeyBus.uiVisible = false; super.onPause(); }
 
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
@@ -1051,6 +1078,19 @@ public final class MainActivity extends Activity {
         if (e.getAction() == KeyEvent.ACTION_DOWN) KeyBus.lastEvent = KeyBus.name(code) + "  ·  key event";
         if (playerVisible && e.getAction() == KeyEvent.ACTION_DOWN) setControlsVisible(true);
         return super.dispatchKeyEvent(e);
+    }
+
+    private void requestAllFiles() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            try {
+                startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + getPackageName())));
+            } catch (Exception ex) {
+                try { startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)); }
+                catch (Exception ex2) { toast(Tr.t("grantAllHint")); }
+            }
+        } else {
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQ_PERMS);
+        }
     }
 
     private void startLearning() {

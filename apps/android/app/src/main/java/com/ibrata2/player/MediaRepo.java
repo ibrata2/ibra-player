@@ -32,7 +32,7 @@ final class MediaRepo {
     }
 
     static final class Folder {
-        String name, path;
+        String name, path, volume;
         final List<Item> items = new ArrayList<>();
     }
 
@@ -57,6 +57,10 @@ final class MediaRepo {
             query(cr, vUri, true, seen);
             query(cr, aUri, false, seen);
         }
+        // MediaStore on head units often indexes only part of a USB disk, so walk
+        // every reachable storage ourselves and add whatever it missed.
+        for (File root : storageRoots(ctx)) walk(root, seen);
+
         Collator col = Collator.getInstance(new Locale("ar"));
         Collections.sort(videos, (a, b) -> col.compare(a.title, b.title));
         Collections.sort(music, (a, b) -> col.compare(a.title, b.title));
@@ -77,6 +81,10 @@ final class MediaRepo {
             f.items.add(it);
         }
         folders.addAll(map.values());
+        for (Folder f : folders) {
+            String vol = volumeName(f.path);
+            f.volume = vol;
+        }
         Collections.sort(folders, (a, b) -> col.compare(a.name, b.name));
         for (Folder f : folders) Collections.sort(f.items, (a, b) -> col.compare(a.title, b.title));
     }
@@ -127,6 +135,117 @@ final class MediaRepo {
         }
     }
 
+    // ---------------------------------------------------------------- filesystem walk
+    static final java.util.Set<String> VIDEO_EXT = new java.util.HashSet<>(java.util.Arrays.asList(
+            "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "mpeg", "mpg", "m4v", "ts", "mts", "m2ts", "vob",
+            "3gp", "3g2", "ogv", "divx", "xvid", "asf", "f4v", "rm", "rmvb", "m2v", "dat", "trp", "tp", "mpe"));
+    static final java.util.Set<String> AUDIO_EXT = new java.util.HashSet<>(java.util.Arrays.asList(
+            "mp3", "aac", "m4a", "flac", "wav", "wma", "ogg", "oga", "opus", "ac3", "eac3", "dts", "mka", "alac",
+            "ape", "aiff", "aif", "amr", "wv", "m4b", "mp2", "mid", "midi"));
+    private static final int MAX_FILES = 80_000;
+    static volatile int progress;      // files examined, shown while scanning
+    final List<String> rootsScanned = new ArrayList<>();
+    boolean unreadableRoot;
+
+    /** Every mounted storage: internal, SD cards, USB sticks and USB hard disks. */
+    static List<File> storageRoots(Context ctx) {
+        java.util.LinkedHashMap<String, File> out = new java.util.LinkedHashMap<>();
+        try {
+            android.os.storage.StorageManager sm = (android.os.storage.StorageManager) ctx.getSystemService(Context.STORAGE_SERVICE);
+            for (android.os.storage.StorageVolume v : sm.getStorageVolumes()) {
+                File d = null;
+                if (Build.VERSION.SDK_INT >= 30) d = v.getDirectory();
+                else {
+                    try { d = (File) v.getClass().getMethod("getPathFile").invoke(v); } catch (Exception ignored) { }
+                    if (d == null) try { d = new File((String) v.getClass().getMethod("getPath").invoke(v)); } catch (Exception ignored) { }
+                }
+                addRoot(out, d);
+            }
+        } catch (Exception ignored) { }
+        addRoot(out, android.os.Environment.getExternalStorageDirectory());
+        // Chinese head units often mount USB drives in non-standard places
+        for (String base : new String[]{"/storage", "/mnt", "/mnt/media_rw", "/mnt/usb_storage", "/mnt/usb", "/mnt/udisk"}) {
+            File[] kids = new File(base).listFiles();
+            if (kids == null) continue;
+            for (File k : kids) {
+                String n = k.getName();
+                if (n.equals("self") || n.equals("emulated") || n.equals("runtime") || n.equals("secure") || n.equals("asec")
+                        || n.equals("obb") || n.equals("user") || n.equals("pass_through") || n.equals("appfuse") || n.equals("vendor")
+                        || n.equals("installer") || n.equals("expand") || n.equals("product") || n.equals("data_mirror")) continue;
+                addRoot(out, k);
+            }
+        }
+        return new ArrayList<>(out.values());
+    }
+
+    private static void addRoot(java.util.Map<String, File> out, File d) {
+        if (d == null || !d.isDirectory()) return;
+        String key;
+        try { key = d.getCanonicalPath(); } catch (Exception e) { key = d.getAbsolutePath(); }
+        for (String k : out.keySet()) if (key.startsWith(k + "/") || key.equals(k)) return;   // already covered
+        out.put(key, d);
+    }
+
+    private static String volumeName(String path) {
+        if (path == null) return "";
+        String[] p = path.split("/");
+        // /storage/XXXX-XXXX/...  or /mnt/usb_storage/USB_DISK0/...
+        if (p.length > 2 && p[1].equals("storage")) return p[2].equals("emulated") ? "Internal" : p[2];
+        if (p.length > 2 && p[1].equals("mnt")) return p.length > 3 ? p[3] : p[2];
+        return "";
+    }
+
+    private void walk(File root, Set<String> seen) {
+        File[] top = root.listFiles();
+        if (top == null) { unreadableRoot = true; return; }
+        rootsScanned.add(root.getAbsolutePath());
+        java.util.ArrayDeque<File> stack = new java.util.ArrayDeque<>();
+        stack.push(root);
+        int count = 0;
+        while (!stack.isEmpty() && count < MAX_FILES) {
+            File dir = stack.pop();
+            File[] files = dir.listFiles();
+            if (files == null) continue;
+            for (File f : files) {
+                String n = f.getName();
+                if (n.startsWith(".")) continue;
+                if (f.isDirectory()) {
+                    // skip app-private data and system folders
+                    if (dir.equals(root) && (n.equals("Android") || n.equals("LOST.DIR") || n.equals("System Volume Information"))) continue;
+                    stack.push(f);
+                    continue;
+                }
+                count++;
+                progress++;
+                int dot = n.lastIndexOf('.');
+                if (dot < 0) continue;
+                String ext = n.substring(dot + 1).toLowerCase(Locale.ROOT);
+                boolean video = VIDEO_EXT.contains(ext);
+                if (!video && !AUDIO_EXT.contains(ext)) continue;
+                String path = f.getAbsolutePath();
+                if (seen.contains(path)) continue;
+                String canon = path;
+                try { canon = f.getCanonicalPath(); } catch (Exception ignored) { }
+                if (seen.contains(canon)) continue;
+                seen.add(path);
+                seen.add(canon);
+                Item it = new Item();
+                it.video = video;
+                it.path = path;
+                it.uri = Uri.fromFile(f).toString();
+                it.title = stripExt(n);
+                it.folder = f.getParent();
+                it.sub = video ? new File(it.folder).getName() : "";
+                (video ? videos : music).add(it);
+            }
+        }
+    }
+
+    static boolean hasFullAccess(Context ctx) {
+        if (Build.VERSION.SDK_INT >= 30) return android.os.Environment.isExternalStorageManager();
+        return ctx.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
     static String stripExt(String n) {
         if (n == null) return null;
         int d = n.lastIndexOf('.');
@@ -139,7 +258,13 @@ final class MediaRepo {
         Bitmap b = THUMBS.get(key);
         if (b != null) return b;
         try {
-            if (Build.VERSION.SDK_INT >= 29) {
+            if (it.id == 0 && it.path != null) {
+                // found by our own folder scan (not in MediaStore)
+                if (it.video) {
+                    if (Build.VERSION.SDK_INT >= 29) b = android.media.ThumbnailUtils.createVideoThumbnail(new File(it.path), new Size(w, h), null);
+                    else b = android.media.ThumbnailUtils.createVideoThumbnail(it.path, MediaStore.Video.Thumbnails.MINI_KIND);
+                }
+            } else if (Build.VERSION.SDK_INT >= 29) {
                 b = ctx.getContentResolver().loadThumbnail(Uri.parse(it.uri), new Size(w, h), null);
             } else if (it.video) {
                 b = MediaStore.Video.Thumbnails.getThumbnail(ctx.getContentResolver(), it.id, MediaStore.Video.Thumbnails.MINI_KIND, null);

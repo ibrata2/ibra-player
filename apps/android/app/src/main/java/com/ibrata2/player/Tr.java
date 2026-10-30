@@ -95,6 +95,9 @@ final class Tr {
         p("pressAny", "Press any steering wheel button…", "اضغط أي زر بالدركسون…");
         p("unitTip", "If nothing appears here when you press a button, the unit sends it only to its own music app. Look in the unit's settings for an option like \"steering wheel for 3rd-party apps\" or \"media app\" and choose iBRA PLAYER, then turn on global capture above.",
                 "إذا ما يطلع شي هنا لما تضغط الزر، فالجهاز يرسله لتطبيق الموسيقى مالته بس. دوّر بإعدادات الجهاز على خيار مثل \"الدركسون للتطبيقات الخارجية\" أو \"تطبيق الوسائط\" واختار iBRA PLAYER، وبعدين فعّل الالتقاط من أي مكان فوق.");
+        p("scanning", "Scanning drives…", "جاري فحص الأقراص…");
+        p("grantAll", "Show every folder on the disk", "إظهار كل المجلدات بالهارد");
+        p("grantAllHint", "Tap, then allow \"Access all files\" for iBRA PLAYER", "اضغط هنا ثم فعّل \"السماح بالوصول لكل الملفات\" لـ iBRA PLAYER");
         p("playback", "Playback", "التشغيل");
         p("resumeOnOpen", "Continue the last media when the app opens", "متابعة آخر ملف عند فتح البرنامج");
         p("rememberPos", "Remember the position of each file", "تذكّر موضع كل ملف");

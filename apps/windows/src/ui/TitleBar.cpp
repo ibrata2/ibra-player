@@ -5,7 +5,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QToolButton>
-#include <QMenuBar>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QWindow>
 #include <QPainter>
@@ -22,8 +22,11 @@ TitleBar::TitleBar(QWidget *window, QWidget *parent) : QWidget(parent), m_window
     m_logo->setScaledContents(true);
     m_title = new QLabel("iBRA PLAYER", this);
     m_title->setObjectName("TitleText");
-    m_menu = new QMenuBar(this);
-    m_menu->setNativeMenuBar(false);
+    m_menuStrip = new QWidget(this);
+    m_menuLayout = new QHBoxLayout(m_menuStrip);
+    m_menuLayout->setContentsMargins(0, 0, 0, 0);
+    m_menuLayout->setSpacing(0);
+    m_menuStrip->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     m_media = new QLabel(this);
     m_media->setProperty("muted", true);
     m_media->setTextInteractionFlags(Qt::NoTextInteraction);
@@ -52,7 +55,7 @@ TitleBar::TitleBar(QWidget *window, QWidget *parent) : QWidget(parent), m_window
     l->addWidget(m_logo);
     l->addWidget(m_title);
     l->addSpacing(8);
-    l->addWidget(m_menu);
+    l->addWidget(m_menuStrip);
     l->addWidget(m_media, 1);
     l->addWidget(m_min);
     l->addWidget(m_max);
@@ -103,4 +106,30 @@ void TitleBar::paintEvent(QPaintEvent *) {
     const Theme &t = ThemeManager::instance()->current();
     p.setPen(t.borderColor(0.6));
     p.drawLine(12, height() - 1, width() - 12, height() - 1);
+}
+
+void TitleBar::setMenus(const QList<QPair<QString, QMenu *>> &menus) {
+    while (QLayoutItem *it = m_menuLayout->takeAt(0)) {
+        if (QWidget *w = it->widget()) { w->hide(); w->deleteLater(); }
+        delete it;
+    }
+    for (const auto &m : menus) {
+        auto *b = new QToolButton(m_menuStrip);
+        b->setObjectName("MenuButton");
+        b->setText(m.first);                    // "&File" gives Alt+F like a menu bar
+        b->setMenu(m.second);
+        b->setPopupMode(QToolButton::InstantPopup);
+        b->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        b->setFocusPolicy(Qt::NoFocus);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        b->setFixedHeight(30);
+        m_menuLayout->addWidget(b);
+        b->show();   // otherwise the layout ignores it while measuring (language switch)
+    }
+    m_menuLayout->invalidate();
+    int w = 0;
+    for (int i = 0; i < m_menuLayout->count(); ++i)
+        if (QWidget *b = m_menuLayout->itemAt(i)->widget()) w += b->sizeHint().width();
+    m_menuStrip->setFixedWidth(w + 4);
 }

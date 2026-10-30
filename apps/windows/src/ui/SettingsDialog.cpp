@@ -496,8 +496,12 @@ void SettingsDialog::buildShortcutsPage() {
     table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
     table->setColumnWidth(1, 200);
     table->verticalHeader()->hide();
-    table->setMinimumHeight(360);
+    // Rows tall enough for the key editor, so shortcuts are never cut off
+    table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    table->verticalHeader()->setDefaultSectionSize(44);
+    table->setMinimumHeight(420);
     table->setSelectionMode(QAbstractItemView::NoSelection);
+    table->setFocusPolicy(Qt::NoFocus);
     QList<QKeySequenceEdit *> edits;
     for (int i = 0; i < defs.size(); ++i) {
         const ShortcutDef &d = defs[i];
@@ -505,13 +509,18 @@ void SettingsDialog::buildShortcutsPage() {
         item->setFlags(Qt::ItemIsEnabled);
         table->setItem(i, 0, item);
         auto *edit = new QKeySequenceEdit(Shortcuts::get(d.id));
+        edit->setLayoutDirection(Qt::LeftToRight);     // "Ctrl+O" always reads left to right
+        auto *cell = new QWidget;
+        auto *cl = new QHBoxLayout(cell);
+        cl->setContentsMargins(8, 0, 8, 0);
+        cl->addWidget(edit, 0, Qt::AlignVCenter);
         const QString id = d.id;
         connect(edit, &QKeySequenceEdit::editingFinished, this, [edit, id] {
             QKeySequence seq = edit->keySequence();
             if (seq.count() > 1) { seq = QKeySequence(seq[0]); edit->setKeySequence(seq); }
             Shortcuts::set(id, seq);
         });
-        table->setCellWidget(i, 1, edit);
+        table->setCellWidget(i, 1, cell);
         edits << edit;
     }
     f->addRow(table);

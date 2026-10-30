@@ -298,6 +298,9 @@ QLabel[heading="true"] { font-size: 13pt; font-weight: 600; }
 
     s += QString(R"(
 QMenuBar { background: transparent; border: none; padding: 0; }
+#MenuButton { background: transparent; border: none; padding: 4px 11px; border-radius: %1px; color: %2; }
+#MenuButton:hover, #MenuButton:pressed, #MenuButton[popupMode="2"]:open { background: %3; }
+#MenuButton::menu-indicator { image: none; width: 0; }
 QMenuBar::item { background: transparent; padding: 5px 10px; border-radius: %1px; color: %2; }
 QMenuBar::item:selected, QMenuBar::item:pressed { background: %3; }
 QMenu { background: %4; border: 1px solid %5; border-radius: %6px; padding: 6px; }
@@ -321,8 +324,10 @@ QPushButton:disabled { color: %9; }
        .arg(rgba(fieldHover), rgba(hoverBg), t.accent.name(), t.accentText.name(), t.accent.lighter(112).name(), t.textMuted.name());
 
     s += QString(R"(
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QTimeEdit, QKeySequenceEdit QLineEdit {
+QKeySequenceEdit { background: transparent; border: none; padding: 0; margin: 0; }
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QTimeEdit {
   background: %1; border: 1px solid %2; border-radius: %3px; padding: 5px 8px; selection-background-color: %4; selection-color: %5; }
+QKeySequenceEdit QLineEdit { background: %1; border: 1px solid %2; border-radius: %3px; padding: 4px 8px; margin: 0; }
 QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus { border: 1px solid %4; }
 QComboBox::drop-down { border: none; width: 22px; }
 QComboBox QAbstractItemView { background: %6; border: 1px solid %2; border-radius: %3px; selection-background-color: %7; outline: 0; padding: 4px; }
@@ -342,6 +347,7 @@ QListWidget, QTableWidget, QTreeWidget, QListView, QTableView, QTextBrowser, QPl
 QListWidget::item, QTableWidget::item { padding: 6px 6px; border-radius: %4px; }
 QListWidget::item:hover, QTableWidget::item:hover { background: %5; }
 QListWidget::item:selected, QTableWidget::item:selected { background: %6; color: %8; }
+QHeaderView { background: transparent; border: none; }
 QHeaderView::section { background: transparent; border: none; border-bottom: 1px solid %2; padding: 6px; font-weight: 600; color: %9; }
 QTableCornerButton::section { background: transparent; border: none; }
 )").arg(rgba(field), rgba(t.borderColor(0.6))).arg(r).arg(rs)

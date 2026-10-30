@@ -146,6 +146,7 @@ private:
     QNetworkAccessManager *m_net = nullptr;
 
     QHash<QString, QAction *> m_actions;
+    QList<QMenu *> m_topMenus;
     QTimer m_hideTimer, m_osdTimer, m_resumeTimer;
     bool m_fullscreen = false, m_wasMaximized = false;
     bool m_pendingPlay = false;

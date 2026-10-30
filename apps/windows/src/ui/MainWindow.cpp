@@ -434,22 +434,22 @@ void MainWindow::retheme() {
 }
 
 void MainWindow::buildMenus() {
-    QMenuBar *mb = m_title->menuBar();
-    mb->clear();
-    const QList<QPair<QString, const char *>> menus = {
+    // Old menus are owned by this window; drop them before creating new ones
+    for (QMenu *m : m_topMenus) m->deleteLater();
+    m_topMenus.clear();
+    const QList<QPair<QString, const char *>> defs = {
         {"file", "menu.file"}, {"view", "menu.view"}, {"play", "menu.play"},
         {"navigate", "menu.navigate"}, {"favorites", "menu.favorites"}, {"help", "menu.help"}};
-    for (const auto &m : menus) {
-        QMenu *menu = mb->addMenu(T(m.second));
-        const QString which = m.first;
+    QList<QPair<QString, QMenu *>> menus;
+    for (const auto &d : defs) {
+        auto *menu = new QMenu(this);
+        const QString which = d.first;
         connect(menu, &QMenu::aboutToShow, this, [this, menu, which] { menu->clear(); fillMenu(menu, which); });
-        fillMenu(menu, which);   // so keyboard accelerators exist before first open
+        fillMenu(menu, which);
+        m_topMenus << menu;
+        menus.append({T(d.second), menu});
     }
-    // Reserve the menu bar's full width so no item collapses into the "»"
-    // overflow button (Arabic text is wider and RTL layouts trigger it).
-    mb->adjustSize();
-    mb->setMinimumWidth(mb->sizeHint().width() + 12);
-    mb->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    m_title->setMenus(menus);
 }
 
 void MainWindow::fillMenu(QMenu *menu, const QString &which) {

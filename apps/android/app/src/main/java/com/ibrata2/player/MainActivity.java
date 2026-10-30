@@ -1063,13 +1063,13 @@ public final class MainActivity extends Activity {
         int code = e.getKeyCode();
         if (KeyBus.learn != null) {
             if (code == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
-            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) KeyBus.report(code, "key event");
+            if (KeyBus.accept(e)) KeyBus.report(code, "key event");
             return true;
         }
         Map<Integer, String> map = prefs.keyMap();
         String action = map.get(code);
         if (action != null && controller != null) {
-            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+            if (KeyBus.accept(e)) {
                 KeyBus.lastEvent = KeyBus.name(code) + "  ·  key event";
                 act(action);
             }

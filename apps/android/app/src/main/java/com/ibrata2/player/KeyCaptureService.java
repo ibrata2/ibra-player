@@ -36,13 +36,13 @@ public final class KeyCaptureService extends AccessibilityService {
             default: break;
         }
         if (KeyBus.learn != null) {
-            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) KeyBus.report(code, "accessibility");
+            if (KeyBus.accept(e)) KeyBus.report(code, "accessibility");
             return true;
         }
         if (KeyBus.uiVisible) return false;   // the activity handles keys itself while it is in front
         String action = new Prefs(this).keyMap().get(code);
         if (action == null || "ignore".equals(action) || !PlaybackService.isActivePlayer()) return false;
-        if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+        if (KeyBus.accept(e)) {
             KeyBus.lastEvent = KeyBus.name(code) + "  ·  accessibility";
             PlaybackService.runAction(this, action);
         }

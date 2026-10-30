@@ -61,6 +61,11 @@ public final class PlaybackService extends MediaSessionService {
 
     private static PlaybackService instance;
 
+    static boolean isRunning() {
+        PlaybackService s = instance;
+        return s != null && s.player != null && s.player.getMediaItemCount() > 0;
+    }
+
     /** True when iBRA PLAYER is the player the user is currently using. */
     static boolean isActivePlayer() {
         PlaybackService s = instance;
@@ -100,7 +105,7 @@ public final class PlaybackService extends MediaSessionService {
                 KeyEvent ev = Build.VERSION.SDK_INT >= 33
                         ? i.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent.class)
                         : i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (ev != null && ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0
+                if (ev != null && KeyBus.accept(ev)
                         && KeyBus.dispatch(c, ev.getKeyCode(), "media-button broadcast") && isOrderedBroadcast()) abortBroadcast();
                 return;
             }
@@ -117,13 +122,16 @@ public final class PlaybackService extends MediaSessionService {
             }
             String cmd = i.getStringExtra("command");
             if (cmd == null) cmd = act;
+            String key = cmd.endsWith("next") ? "next" : cmd.endsWith("previous") ? "previous"
+                    : cmd.endsWith("togglepause") ? "playPause" : (cmd.endsWith("pause") || cmd.endsWith("stop")) ? "pause"
+                    : cmd.endsWith("play") ? "play" : cmd;
+            if (!KeyBus.acceptCommand(key)) return;
             KeyBus.lastEvent = cmd + "  ·  music command";
             if (cmd.endsWith("next")) perform(player, "next");
             else if (cmd.endsWith("previous")) perform(player, "previous");
             else if (cmd.endsWith("togglepause")) perform(player, "playPause");
-            else if (cmd.endsWith("pause")) player.pause();
-            else if (cmd.endsWith("play")) player.play();
-            else if (cmd.endsWith("stop")) player.pause();
+            else if (cmd.endsWith("pause") || cmd.endsWith("stop")) perform(player, "pause");
+            else if (cmd.endsWith("play")) perform(player, "play");
         }
     };
 
@@ -223,6 +231,8 @@ public final class PlaybackService extends MediaSessionService {
                 if (p.isPlaying()) p.pause();
                 else { if (p.getPlaybackState() == Player.STATE_ENDED) p.seekTo(0); p.prepare(); p.play(); }
                 break;
+            case "play": if (p.getPlaybackState() == Player.STATE_ENDED) p.seekTo(0); p.prepare(); p.play(); break;
+            case "pause": p.pause(); break;
             case "next": if (p.hasNextMediaItem()) p.seekToNextMediaItem(); else p.seekTo(0, 0); break;
             case "previous":
                 if (p.getCurrentPosition() > 5000 || !p.hasPreviousMediaItem()) p.seekTo(0); else p.seekToPreviousMediaItem();
@@ -298,12 +308,12 @@ public final class PlaybackService extends MediaSessionService {
             if (ev == null) return false;
             int code = ev.getKeyCode();
             if (KeyBus.learn != null) {
-                if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0) KeyBus.report(code, "media session");
+                if (KeyBus.accept(ev)) KeyBus.report(code, "media session");
                 return true;
             }
             String action = prefs.keyMap().get(code);
             if (action == null) return false;          // let Media3 handle anything else
-            if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0) {
+            if (KeyBus.accept(ev)) {
                 KeyBus.lastEvent = KeyBus.name(code) + "  ·  media session";
                 lastActive = android.os.SystemClock.elapsedRealtime();
                 if (!"ignore".equals(action)) runAction(PlaybackService.this, action);

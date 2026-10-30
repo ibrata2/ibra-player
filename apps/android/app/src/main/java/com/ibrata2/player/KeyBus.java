@@ -28,6 +28,46 @@ final class KeyBus {
         return KeyEvent.keyCodeToString(code).replace("KEYCODE_", "");
     }
 
+    private static int lastDownCode = -1;
+    private static long lastDownTime;
+    private static long lastFireTime;
+    private static int lastFireCode = -1;
+
+    /**
+     * Decides whether a key event should trigger an action. Acts on DOWN; acts
+     * on UP only when no DOWN for that key was seen (units that send UP only).
+     * Also drops the same key arriving twice through two channels.
+     */
+    static synchronized boolean accept(KeyEvent ev) {
+        long now = android.os.SystemClock.uptimeMillis();
+        int code = ev.getKeyCode();
+        if (ev.getAction() == KeyEvent.ACTION_DOWN) {
+            if (ev.getRepeatCount() > 0) return false;
+            lastDownCode = code;
+            lastDownTime = now;
+        } else if (ev.getAction() == KeyEvent.ACTION_UP) {
+            if (code == lastDownCode && now - lastDownTime < 2000) return false;   // pair already handled
+        } else {
+            return false;
+        }
+        if (code == lastFireCode && now - lastFireTime < 250) return false;       // same press via two channels
+        lastFireCode = code;
+        lastFireTime = now;
+        return true;
+    }
+
+    private static String lastCmd = "";
+    private static long lastCmdTime;
+
+    /** Same de-duplication for text commands that may arrive through two receivers. */
+    static synchronized boolean acceptCommand(String cmd) {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (cmd.equals(lastCmd) && now - lastCmdTime < 300) return false;
+        lastCmd = cmd;
+        lastCmdTime = now;
+        return true;
+    }
+
     /** Records the event; returns true when it was taken by the learning dialog. */
     static boolean report(int code, String source) {
         lastEvent = name(code) + "  ·  " + source;

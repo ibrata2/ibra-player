@@ -62,9 +62,18 @@
             </intent-filter>
         </service>
 
-        <receiver android:name="androidx.media3.session.MediaButtonReceiver" android:exported="true">
-            <intent-filter>
+        <!-- Our own media-button receiver: Media3's ignores NEXT/PREVIOUS on Android 8+ -->
+        <receiver android:name=".CarKeyReceiver" android:exported="true">
+            <intent-filter android:priority="999">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.android.music.musicservicecommand" />
+                <action android:name="com.android.music.musicservicecommand.next" />
+                <action android:name="com.android.music.musicservicecommand.previous" />
+                <action android:name="com.android.music.musicservicecommand.togglepause" />
+                <action android:name="com.android.music.musicservicecommand.pause" />
+                <action android:name="com.android.music.musicservicecommand.play" />
             </intent-filter>
         </receiver>
 

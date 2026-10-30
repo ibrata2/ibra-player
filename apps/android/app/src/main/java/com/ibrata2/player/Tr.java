@@ -74,6 +74,8 @@ final class Tr {
         p("resetKeys", "Reset buttons", "إعادة ضبط الأزرار");
         p("key", "Key", "زر");
         p("a.playPause", "Play / Pause", "تشغيل / إيقاف مؤقت");
+        p("a.play", "Play", "تشغيل");
+        p("a.pause", "Pause", "إيقاف مؤقت");
         p("a.next", "Next", "التالي");
         p("a.previous", "Previous", "السابق");
         p("a.forward", "Forward 10 s", "تقديم 10 ثوانٍ");

@@ -89,14 +89,14 @@ final class Prefs {
     }
 
     // ---- steering wheel: keycode -> action
-    static final String[] ACTIONS = {"playPause", "next", "previous", "forward", "rewind", "stop", "repeat", "shuffle", "openPlayer", "ignore"};
+    static final String[] ACTIONS = {"playPause", "play", "pause", "next", "previous", "forward", "rewind", "stop", "repeat", "shuffle", "openPlayer", "ignore"};
 
     static Map<Integer, String> defaultKeys() {
         Map<Integer, String> m = new LinkedHashMap<>();
         m.put(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, "playPause");
         m.put(KeyEvent.KEYCODE_HEADSETHOOK, "playPause");
-        m.put(KeyEvent.KEYCODE_MEDIA_PLAY, "playPause");
-        m.put(KeyEvent.KEYCODE_MEDIA_PAUSE, "playPause");
+        m.put(KeyEvent.KEYCODE_MEDIA_PLAY, "play");
+        m.put(KeyEvent.KEYCODE_MEDIA_PAUSE, "pause");
         m.put(KeyEvent.KEYCODE_MEDIA_NEXT, "next");
         m.put(KeyEvent.KEYCODE_MEDIA_PREVIOUS, "previous");
         m.put(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, "forward");

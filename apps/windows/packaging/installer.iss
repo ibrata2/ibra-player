@@ -95,6 +95,14 @@ Filename: "{app}\{#AppExe}"; Parameters: "--register-context-menu"; Flags: runhi
 Filename: "{app}\{#AppExe}"; Parameters: "--register-associations"; Flags: runhidden runasoriginaluser waituntilterminated; Tasks: associations
 Filename: "ms-settings:defaultapps"; Flags: shellexec runasoriginaluser nowait postinstall skipifsilent unchecked; Description: "Windows Default Apps"; Tasks: associations
 Filename: "{app}\{#AppExe}"; Description: "{cm:Launch}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+; In-app updates run the installer silently with /RELAUNCH=1: start the player again afterwards
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: ShouldRelaunch
+
+[Code]
+function ShouldRelaunch: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:relaunch|0}') = '1');
+end;
 
 [UninstallRun]
 Filename: "{app}\{#AppExe}"; Parameters: "--unregister-all"; Flags: runhidden waituntilterminated; RunOnceId: "iBRAUnregister"

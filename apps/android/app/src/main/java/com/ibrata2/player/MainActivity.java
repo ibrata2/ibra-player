@@ -930,7 +930,18 @@ public final class MainActivity extends Activity {
         }
     };
 
+    private boolean updateChecked;
+
     private void onControllerReady() {
+        if (!updateChecked && prefs.bool("autoUpdate", true)) {
+            updateChecked = true;
+            long last = prefs.integer("lastUpdateCheckDay", 0);
+            long today = System.currentTimeMillis() / 86_400_000L;
+            if (today != last) {
+                prefs.setInt("lastUpdateCheckDay", (int) today);
+                ui.postDelayed(() -> Updater.check(this, true), 4000);
+            }
+        }
         refreshPlayerState();
         if (pendingViewUri != null) { playPendingUri(); return; }
         if (controller.getMediaItemCount() == 0 && prefs.bool("resumeOnOpen", true)) restoreSession(pendingAutoplay || prefs.bool("resumeOnOpen", true));
@@ -1223,6 +1234,8 @@ public final class MainActivity extends Activity {
         ab.addView(at, new LinearLayout.LayoutParams(0, -2, 1f));
         about.addView(ab);
         about.addView(text(Tr.t("codecNote"), 13, g.muted, false));
+        about.addView(button(Tr.t("updCheck"), true, v -> Updater.check(this, false)));
+        about.addView(toggle(Tr.t("updAuto"), "autoUpdate", true));
     }
 
     private void rebuildKeepingTab() {

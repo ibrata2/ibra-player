@@ -100,6 +100,18 @@ final class Tr {
         p("scanning", "Scanning drives…", "جاري فحص الأقراص…");
         p("grantAll", "Show every folder on the disk", "إظهار كل المجلدات بالهارد");
         p("grantAllHint", "Tap, then allow \"Access all files\" for iBRA PLAYER", "اضغط هنا ثم فعّل \"السماح بالوصول لكل الملفات\" لـ iBRA PLAYER");
+        p("updCheck", "Check for updates", "التحقق من التحديثات");
+        p("updAuto", "Check for new versions automatically", "التحقق من الإصدارات الجديدة تلقائياً");
+        p("updAvailable", "Version %1$s is available (you have %2$s).\nDownload and install it now?", "الإصدار %1$s متوفر (لديك %2$s).\nتنزيله وتثبيته الآن؟");
+        p("updNow", "Update", "تحديث");
+        p("updLater", "Later", "لاحقاً");
+        p("updLatest", "You have the latest version (%s).", "لديك أحدث إصدار (%s).");
+        p("updFailed", "Could not check for updates. Check the internet connection.", "تعذّر التحقق من التحديثات. تأكد من الإنترنت.");
+        p("updDownloading", "Downloading the update…", "جاري تنزيل التحديث…");
+        p("updInstalling", "Installing…", "جاري التثبيت…");
+        p("updVerifyFailed", "The update could not be verified, so it was not installed.", "تعذّر التحقق من التحديث، لذلك لم يتم تثبيته.");
+        p("updInstallFailed", "The update was not installed.", "لم يتم تثبيت التحديث.");
+        p("updAllowInstall", "Allow iBRA PLAYER to install updates, then tap Update again.", "اسمح لـ iBRA PLAYER بتثبيت التحديثات، ثم اضغط تحديث مرة ثانية.");
         p("playback", "Playback", "التشغيل");
         p("resumeOnOpen", "Continue the last media when the app opens", "متابعة آخر ملف عند فتح البرنامج");
         p("rememberPos", "Remember the position of each file", "تذكّر موضع كل ملف");

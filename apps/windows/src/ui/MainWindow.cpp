@@ -52,6 +52,10 @@
 #include <QVersionNumber>
 #include <QRegularExpression>
 #include <QCloseEvent>
+#include <QDateTime>
+#include <QProcess>
+#include <QCryptographicHash>
+#include <QProgressDialog>
 #include <QPainterPath>
 #include <QPushButton>
 #include <QLineEdit>
@@ -1194,7 +1198,8 @@ void MainWindow::checkForUpdates(bool silent) {
     if (!m_net) m_net = new QNetworkAccessManager(this);
     QNetworkRequest req(QUrl("https://api.github.com/repos/ibrata2/ibra-player/releases/latest"));
     req.setHeader(QNetworkRequest::UserAgentHeader, "iBRA-PLAYER");   // no identifiers, no history, no file names
-    req.setTransferTimeout(10000);
+    req.setRawHeader("Accept", "application/vnd.github+json");
+    req.setTransferTimeout(15000);
     QNetworkReply *r = m_net->get(req);
     connect(r, &QNetworkReply::finished, this, [this, r, silent] {
         r->deleteLater();
@@ -1202,15 +1207,98 @@ void MainWindow::checkForUpdates(bool silent) {
             if (!silent) QMessageBox::information(this, "iBRA PLAYER", T("upd.failed"));
             return;
         }
-        const QString tag = QJsonDocument::fromJson(r->readAll()).object().value("tag_name").toString();
+        const QJsonObject rel = QJsonDocument::fromJson(r->readAll()).object();
+        const QString tag = rel.value("tag_name").toString();
         const QVersionNumber latest = QVersionNumber::fromString(QString(tag).remove(QRegularExpression("^[vV]")));
         const QVersionNumber mine = QVersionNumber::fromString(IBRA_VERSION);
-        if (!latest.isNull() && latest > mine) {
-            if (QMessageBox::question(this, "iBRA PLAYER", T("upd.available").arg(latest.toString(), mine.toString())) == QMessageBox::Yes)
-                QDesktopServices::openUrl(QUrl(kTelegram));
-        } else if (!silent) {
-            QMessageBox::information(this, "iBRA PLAYER", T("upd.latest").arg(mine.toString()));
+        if (latest.isNull() || latest <= mine) {
+            if (!silent) QMessageBox::information(this, "iBRA PLAYER", T("upd.latest").arg(mine.toString()));
+            return;
         }
+        // Pick the installer asset published by our own CI
+        QJsonObject asset;
+        for (const QJsonValue &v : rel.value("assets").toArray()) {
+            const QString n = v.toObject().value("name").toString();
+            if (n.contains("Setup", Qt::CaseInsensitive) && n.endsWith(".exe", Qt::CaseInsensitive)) asset = v.toObject();
+        }
+        if (asset.isEmpty() || AppSettings::instance()->isPortable()) {
+            // Portable copies (and releases without an installer) are updated by hand
+            if (QMessageBox::question(this, "iBRA PLAYER", T("upd.availablePortable").arg(latest.toString(), mine.toString())) == QMessageBox::Yes)
+                QDesktopServices::openUrl(QUrl(rel.value("html_url").toString()));
+            return;
+        }
+        if (QMessageBox::question(this, "iBRA PLAYER", T("upd.available").arg(latest.toString(), mine.toString())) != QMessageBox::Yes)
+            return;
+        downloadAndInstall(asset);
+    });
+}
+
+void MainWindow::downloadAndInstall(const QJsonObject &asset) {
+    const QUrl url(asset.value("browser_download_url").toString());
+    // Only ever download from this project's GitHub releases over HTTPS
+    if (url.scheme() != "https" || url.host() != "github.com" || !url.path().startsWith("/ibrata2/ibra-player/releases/download/")) {
+        QMessageBox::warning(this, "iBRA PLAYER", T("upd.verifyFailed"));
+        return;
+    }
+    const qint64 expectedSize = qint64(asset.value("size").toDouble());
+    QString expectedSha = asset.value("digest").toString();
+    if (expectedSha.startsWith("sha256:")) expectedSha = expectedSha.mid(7).toLower(); else expectedSha.clear();
+
+    const QString file = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+                             .filePath("iBRA-PLAYER-update-" + QString::number(QDateTime::currentSecsSinceEpoch()) + ".exe");
+    auto *out = new QFile(file, this);
+    if (!out->open(QIODevice::WriteOnly)) { QMessageBox::warning(this, "iBRA PLAYER", T("dlg.saveFailed")); out->deleteLater(); return; }
+
+    auto *progress = new QProgressDialog(T("upd.downloading"), T("upd.cancel"), 0, 100, this);
+    progress->setWindowTitle("iBRA PLAYER");
+    progress->setWindowModality(Qt::WindowModal);
+    progress->setMinimumDuration(0);
+    progress->setAutoClose(false);
+    progress->setAutoReset(false);
+    progress->setValue(0);
+
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::UserAgentHeader, "iBRA-PLAYER");
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkReply *r = m_net->get(req);
+    auto *hash = new QCryptographicHash(QCryptographicHash::Sha256);
+    connect(r, &QNetworkReply::readyRead, this, [r, out, hash] {
+        const QByteArray chunk = r->readAll();
+        hash->addData(chunk);
+        out->write(chunk);
+    });
+    connect(r, &QNetworkReply::downloadProgress, this, [progress](qint64 got, qint64 total) {
+        if (total > 0) progress->setValue(int(got * 100 / total));
+    });
+    connect(progress, &QProgressDialog::canceled, r, &QNetworkReply::abort);
+    connect(r, &QNetworkReply::finished, this, [this, r, out, hash, progress, file, expectedSize, expectedSha] {
+        const QByteArray rest = r->readAll();
+        hash->addData(rest);
+        out->write(rest);
+        out->close();
+        const QString sha = QString::fromLatin1(hash->result().toHex());
+        const bool ok = r->error() == QNetworkReply::NoError;
+        r->deleteLater();
+        out->deleteLater();
+        delete hash;
+        progress->close();
+        progress->deleteLater();
+        if (!ok) { QFile::remove(file); QMessageBox::warning(this, "iBRA PLAYER", T("upd.failed")); return; }
+        const qint64 size = QFileInfo(file).size();
+        if ((expectedSize > 0 && size != expectedSize) || (!expectedSha.isEmpty() && sha != expectedSha)) {
+            QFile::remove(file);
+            Log::write("warn", QString("update verification failed (size %1/%2)").arg(size).arg(expectedSize));
+            QMessageBox::warning(this, "iBRA PLAYER", T("upd.verifyFailed"));
+            return;
+        }
+        Log::write("info", "update downloaded and verified, starting installer");
+        // Silent update over the installed copy; the installer restarts the player afterwards
+        const bool started = QProcess::startDetached(file, {"/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
+                                                             "/CLOSEAPPLICATIONS", "/RELAUNCH=1"});
+        if (!started) { QMessageBox::warning(this, "iBRA PLAYER", T("upd.failed")); return; }
+        saveResume();
+        close();
+        qApp->quit();
     });
 }
 

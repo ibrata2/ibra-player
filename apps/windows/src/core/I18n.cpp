@@ -195,7 +195,11 @@ const Entry kStrings[] = {
     {"q.assoc", "Register iBRA PLAYER for video and audio files?\n\nWindows will then open Default Apps so you can confirm iBRA PLAYER as the default player.",
      "هل تريد تسجيل iBRA PLAYER لملفات الفيديو والصوت؟\n\nسيفتح ويندوز بعدها صفحة التطبيقات الافتراضية لتأكيد iBRA PLAYER كمشغّل افتراضي."},
     {"q.deleteTheme", "Delete the theme \"%1\"?", "هل تريد حذف المظهر \"%1\"؟"},
-    {"upd.available", "iBRA PLAYER %1 is available (you have %2).\nOpen the download channel?", "الإصدار %1 من iBRA PLAYER متوفر (لديك %2).\nهل تريد فتح قناة التحميل؟"},
+    {"upd.available", "iBRA PLAYER %1 is available (you have %2).\nDownload and install it now? The player will restart.", "الإصدار %1 من iBRA PLAYER متوفر (لديك %2).\nتنزيله وتثبيته الآن؟ سيُعاد تشغيل البرنامج."},
+    {"upd.availablePortable", "iBRA PLAYER %1 is available (you have %2).\nOpen the download page?", "الإصدار %1 من iBRA PLAYER متوفر (لديك %2).\nفتح صفحة التحميل؟"},
+    {"upd.downloading", "Downloading the update…", "جاري تنزيل التحديث…"},
+    {"upd.cancel", "Cancel", "إلغاء"},
+    {"upd.verifyFailed", "The downloaded update could not be verified, so it was not installed.", "تعذّر التحقق من التحديث المُنزَّل، لذلك لم يتم تثبيته."},
     {"upd.latest", "You have the latest version (%1).", "لديك أحدث إصدار (%1)."},
     {"upd.failed", "Could not check for updates. Please check your internet connection.", "تعذّر التحقق من التحديثات. يرجى التحقق من اتصال الإنترنت."},
 

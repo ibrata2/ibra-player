@@ -85,7 +85,7 @@ const QMap<QString, QVariant> &AppSettings::defaults() {
         m["playlist/addFolderSiblings"] = false;
         m["privacy/history"] = true;
         m["privacy/redactLogs"] = true;
-        m["privacy/updateCheck"] = false;
+        m["privacy/updateCheck"] = true;
         // Mouse
         m["mouse/wheel"] = "volume";         // volume | seek | none
         m["mouse/doubleClick"] = "fullscreen";

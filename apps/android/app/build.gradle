@@ -10,15 +10,28 @@ android {
         applicationId 'com.ibrata2.player'
         minSdk 23
         targetSdk 35
-        versionCode 14
-        versionName '1.0.5'
+        versionCode 15
+        versionName '1.0.6'
+    }
+
+    // One permanent key for every build, so new versions install over old ones.
+    def signingProps = new Properties()
+    def signingFile = rootProject.file('keystore/signing.properties')
+    if (signingFile.exists()) signingFile.withInputStream { signingProps.load(it) }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file(signingProps.getProperty('storeFile', 'keystore/ibra-player.jks'))
+            storePassword signingProps.getProperty('storePassword')
+            keyAlias signingProps.getProperty('keyAlias', 'ibraplayer')
+            keyPassword signingProps.getProperty('keyPassword')
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            // Signed with the debug key so the APK installs directly on head units.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 

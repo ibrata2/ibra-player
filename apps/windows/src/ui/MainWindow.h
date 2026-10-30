@@ -3,6 +3,7 @@
 #include <QHash>
 #include <QPointer>
 #include <QTimer>
+#include <QJsonObject>
 #include "core/Playlist.h"
 
 class MpvWidget;
@@ -109,6 +110,7 @@ private:
     void showAbout();
     void searchSubtitlesOnline();
     void checkForUpdates(bool silent);
+    void downloadAndInstall(const QJsonObject &asset);
     void toggleFullscreen();
     void setFullscreen(bool fs);
     void togglePlaylist();

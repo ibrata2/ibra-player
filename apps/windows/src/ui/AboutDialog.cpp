@@ -1,5 +1,6 @@
 #include "AboutDialog.h"
 #include "Icons.h"
+#include "theme/Theme.h"
 #include "MainWindow.h"
 #include "engine/MpvWidget.h"
 #include "core/I18n.h"
@@ -17,7 +18,10 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent) {
     v->setContentsMargins(28, 24, 28, 20);
 
     auto *logo = new QLabel;
-    logo->setPixmap(Icons::logo(240).scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    QPixmap lp = Icons::logo(320).scaled(150, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    lp.setDevicePixelRatio(1.0);
+    logo->setPixmap(lp);
+    logo->setMinimumHeight(156);
     logo->setAlignment(Qt::AlignCenter);
     v->addWidget(logo);
     auto *name = new QLabel("iBRA PLAYER");
@@ -32,8 +36,15 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent) {
     credit->setAlignment(Qt::AlignCenter);
     credit->setStyleSheet("font-size: 12pt; font-weight: 600;");
     v->addWidget(credit);
-    auto *links = new QLabel("<a href='https://t.me/ibraprogram'>Telegram: t.me/ibraprogram</a> &nbsp;·&nbsp; "
-                             "<a href='https://www.tiktok.com/@ibraprogram'>TikTok: @ibraprogram</a>");
+    // Links in the theme's accent colour (the default blue is unreadable on dark glass)
+    const QString acc = ThemeManager::instance()->current().accent.name();
+    auto *site = new QLabel(QString("<a href='https://ibraprogram.netlify.app/' style='color:%1;font-size:12pt;font-weight:700;text-decoration:none;'>")
+                            .arg(acc) + T("about.apps") + "<br>ibraprogram.netlify.app</a>");
+    site->setOpenExternalLinks(true);
+    site->setAlignment(Qt::AlignCenter);
+    v->addWidget(site);
+    auto *links = new QLabel(QString("<a href='https://t.me/ibraprogram' style='color:%1;text-decoration:none;'>Telegram: t.me/ibraprogram</a> &nbsp;·&nbsp; "
+                                     "<a href='https://www.tiktok.com/@ibraprogram' style='color:%1;text-decoration:none;'>TikTok: @ibraprogram</a>").arg(acc));
     links->setOpenExternalLinks(true);
     links->setAlignment(Qt::AlignCenter);
     v->addWidget(links);

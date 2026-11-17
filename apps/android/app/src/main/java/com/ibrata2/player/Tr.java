@@ -128,6 +128,7 @@ final class Tr {
         p("about", "About", "حول البرنامج");
         p("credit", "برمجة و تطوير ابراهيم الخزرجي", "برمجة و تطوير ابراهيم الخزرجي");
         p("version", "Version", "الإصدار");
+        p("appsSite", "All my apps", "كل تطبيقاتي");
         p("codecNote", "Plays MP4, MKV, AVI, MOV, TS, WebM, FLV, 3GP, MP3, FLAC, WAV, M4A, OGG, Opus, AC-3, DTS, TrueHD and more. Video codecs use the car unit's hardware decoder.",
                 "يشغّل MP4 و MKV و AVI و MOV و TS و WebM و FLV و 3GP و MP3 و FLAC و WAV و M4A و OGG و Opus و AC-3 و DTS و TrueHD وغيرها. ترميزات الفيديو تعتمد على معالج جهاز السيارة.");
         p("on", "On", "تشغيل");

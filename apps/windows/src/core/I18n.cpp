@@ -390,6 +390,8 @@ const Entry kStrings[] = {
      "تظهر التغييرات مباشرة على المشغّل كله. المظاهر المدمجة تبقى كما هي: تُحفظ التعديلات كمظهر مخصص جديد."},
 
     // ---------------------------------------------------------------- about
+    {"about.apps", "All my apps", "كل تطبيقاتي"},
+    {"act.appsSite", "All My Apps (website)", "كل تطبيقاتي (الموقع)"},
     {"about.version", "Version %1", "الإصدار %1"},
     {"about.engine", "Playback engine:", "محرك التشغيل:"},
     {"about.license", "Built on libmpv and FFmpeg (GPL). Source code and third-party notices are included with the program.",

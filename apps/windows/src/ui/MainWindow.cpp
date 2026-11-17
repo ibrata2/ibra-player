@@ -61,6 +61,7 @@
 #include <QLineEdit>
 
 static const char *kTelegram = "https://t.me/ibraprogram";
+static const char *kAppsSite = "https://ibraprogram.netlify.app/";
 
 // =================================================================== GlassRoot
 GlassRoot::GlassRoot(QWidget *parent) : QWidget(parent) {
@@ -392,6 +393,7 @@ void MainWindow::createActions() {
     act("shortcuts_help", "act.shortcutsHelp");
     act("open_log", "act.openLog");
     act("check_updates", "act.checkUpdates");
+    act("apps_site", "act.appsSite");
     act("telegram", "act.telegram");
     act("clear_recent", "act.clearRecent");
     act("clear_favorites", "act.clearFavorites");
@@ -671,6 +673,7 @@ void MainWindow::fillMenu(QMenu *menu, const QString &which) {
         menu->addAction(A("shortcuts_help"));
         menu->addAction(A("open_log"));
         menu->addAction(A("check_updates"));
+        menu->addAction(A("apps_site"));
         menu->addAction(A("telegram"));
         menu->addSeparator();
         menu->addAction(A("about"));
@@ -871,6 +874,7 @@ void MainWindow::trigger(const QString &id) {
     else if (id == "open_log") QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(Log::filePath()).absolutePath()));
     else if (id == "check_updates") checkForUpdates(false);
     else if (id == "telegram") QDesktopServices::openUrl(QUrl(kTelegram));
+    else if (id == "apps_site") QDesktopServices::openUrl(QUrl(kAppsSite));
     else if (id == "clear_recent") Library::instance()->clearHistory();
     else if (id == "clear_favorites") {
         if (QMessageBox::question(this, "iBRA PLAYER", T("q.clearFavorites")) == QMessageBox::Yes)
@@ -1224,7 +1228,7 @@ void MainWindow::checkForUpdates(bool silent) {
         if (asset.isEmpty() || AppSettings::instance()->isPortable()) {
             // Portable copies (and releases without an installer) are updated by hand
             if (QMessageBox::question(this, "iBRA PLAYER", T("upd.availablePortable").arg(latest.toString(), mine.toString())) == QMessageBox::Yes)
-                QDesktopServices::openUrl(QUrl(rel.value("html_url").toString()));
+                QDesktopServices::openUrl(QUrl(kAppsSite));
             return;
         }
         if (QMessageBox::question(this, "iBRA PLAYER", T("upd.available").arg(latest.toString(), mine.toString())) != QMessageBox::Yes)

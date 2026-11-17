@@ -1228,8 +1228,15 @@ public final class MainActivity extends Activity {
         try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { }
         at.addView(text(Tr.t("version") + " " + ver, 14, g.muted, false));
         at.addView(text(Tr.t("credit"), 15, g.text, true));
-        TextView tg = text("t.me/ibraprogram", 15, g.accent, true);
-        tg.setOnClickListener(v -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/ibraprogram"))); } catch (Exception ignored) { } });
+        TextView site = text(Tr.t("appsSite") + "\nibraprogram.netlify.app", 16, g.accent, true);
+        site.setPadding(0, px(6), 0, px(4));
+        site.setOnClickListener(v -> openLink("https://ibraprogram.netlify.app/"));
+        at.addView(site);
+        TextView tg = text("Telegram: t.me/ibraprogram", 15, g.accent, true);
+        tg.setOnClickListener(v -> openLink("https://t.me/ibraprogram"));
+        at.addView(tg);
+        tg = text("TikTok: @ibraprogram", 15, g.accent, true);
+        tg.setOnClickListener(v -> openLink("https://www.tiktok.com/@ibraprogram"));
         at.addView(tg);
         ab.addView(at, new LinearLayout.LayoutParams(0, -2, 1f));
         about.addView(ab);
@@ -1335,6 +1342,10 @@ public final class MainActivity extends Activity {
         b.setLayoutParams(new LinearLayout.LayoutParams(px(sizeDp), px(sizeDp)));
         b.setFocusable(true);
         return b;
+    }
+
+    private void openLink(String url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) { }
     }
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }

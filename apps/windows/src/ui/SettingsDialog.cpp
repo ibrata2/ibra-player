@@ -174,6 +174,7 @@ void SettingsDialog::buildPages() {
         spin(f, "set.autoHide", "ui/autoHideMs", 500, 20000, " ms", 250);
         check(f, "set.osd", "ui/osd");
         check(f, "set.splash", "ui/showSplash");
+        check(f, "set.storeSlides", "ui/storeSlides");
         check(f, "set.rememberGeometry", "ui/rememberGeometry");
         check(f, "set.singleInstance", "ui/singleInstance");
         check(f, "act.alwaysOnTop", "ui/alwaysOnTop");

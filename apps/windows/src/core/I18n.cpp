@@ -258,6 +258,7 @@ const Entry kStrings[] = {
     {"set.autoHide", "Hide controls after", "إخفاء أزرار التحكم بعد"},
     {"set.osd", "Show on-screen messages", "إظهار الرسائل على الشاشة"},
     {"set.splash", "Show splash screen", "إظهار شاشة البدء"},
+    {"set.storeSlides", "Show the latest IBRA STORE programs and games on the start screen", "عرض أحدث برامج وألعاب IBRA STORE بشاشة البداية"},
     {"set.rememberGeometry", "Remember window size and position", "تذكّر حجم النافذة وموقعها"},
     {"set.singleInstance", "Open files in the running player (single window)", "فتح الملفات في المشغّل المفتوح (نافذة واحدة)"},
     {"set.backdrop", "Windows acrylic transparency behind the window", "شفافية الأكريليك من ويندوز خلف النافذة"},

@@ -8,6 +8,7 @@
 #include "ThemeStudio.h"
 #include "MediaInfoDialog.h"
 #include "AboutDialog.h"
+#include "StoreSlides.h"
 #include "engine/MpvWidget.h"
 #include "core/I18n.h"
 #include "core/AppSettings.h"
@@ -141,10 +142,28 @@ void Stage::paintEvent(QPaintEvent *) {
 // Idle screen shown on top of the (black) video surface
 class Placeholder : public QWidget {
 public:
-    explicit Placeholder(QWidget *parent) : QWidget(parent) { setMouseTracking(true); setAcceptDrops(false); }
+    explicit Placeholder(QWidget *parent) : QWidget(parent) {
+        setMouseTracking(true);
+        setAcceptDrops(false);
+        slides = new StoreSlides(this);
+        QObject::connect(slides, &StoreSlides::contentChanged, this, [this] { relayout(); });
+    }
     QString title;
-    bool audioOnly = false;
+    StoreSlides *slides = nullptr;
+    void setAudioOnly(bool on) { m_audioOnly = on; relayout(); update(); }
+    bool audioOnly() const { return m_audioOnly; }
+    // The store slideshow sits under the logo on the idle screen when there is room for it.
+    void relayout() {
+        const int w = qMin(width() - 48, 820);
+        const int h = slides->heightForWidth(w);
+        const int bottomGap = 122;   // keep clear of the floating control bar
+        const bool show = !m_audioOnly && slides->hasContent() && w >= 380 && height() >= h + bottomGap + 200;
+        if (show) slides->setGeometry((width() - w) / 2, height() - h - bottomGap, w, h);
+        slides->setVisible(show);
+        update();
+    }
 protected:
+    void resizeEvent(QResizeEvent *) override { relayout(); }
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
@@ -157,9 +176,13 @@ protected:
         g.setColorAt(0, a);
         g.setColorAt(1, QColor(0, 0, 0, 0));
         p.fillRect(rect(), g);
-        const int s = qBound(64, qMin(width(), height()) / 3, 220);
+        // logo block centred in the space above the slideshow (or in the whole area)
+        const int areaH = slides->isVisible() ? slides->y() : height();
+        const int s = qBound(64, qMin(width(), areaH - 90) / (slides->isVisible() ? 2 : 3), 220);
         const QPixmap logo = Icons::logo(s * 2);
-        const QRect lr(width() / 2 - s / 2, height() / 2 - s / 2 - 40, s, s);
+        const int blockH = s + 74;
+        const int top = slides->isVisible() ? qMax(12, (areaH - blockH) / 2) : height() / 2 - s / 2 - 40;
+        const QRect lr(width() / 2 - s / 2, top, s, s);
         p.drawPixmap(lr, logo);
         QFont f = font();
         f.setPointSizeF(16);
@@ -167,14 +190,16 @@ protected:
         f.setLetterSpacing(QFont::AbsoluteSpacing, 3);
         p.setFont(f);
         p.setPen(QColor(255, 255, 255, 235));
-        p.drawText(QRect(0, lr.bottom() + 14, width(), 32), Qt::AlignCenter, audioOnly ? title : QStringLiteral("iBRA PLAYER"));
+        p.drawText(QRect(0, lr.bottom() + 14, width(), 32), Qt::AlignCenter, m_audioOnly ? title : QStringLiteral("iBRA PLAYER"));
         f.setPointSizeF(10);
         f.setBold(false);
         f.setLetterSpacing(QFont::AbsoluteSpacing, 0);
         p.setFont(f);
         p.setPen(QColor(255, 255, 255, 150));
-        p.drawText(QRect(0, lr.bottom() + 48, width(), 26), Qt::AlignCenter, audioOnly ? T("ph.audio") : T("ph.drop"));
+        p.drawText(QRect(0, lr.bottom() + 48, width(), 26), Qt::AlignCenter, m_audioOnly ? T("ph.audio") : T("ph.drop"));
     }
+private:
+    bool m_audioOnly = false;
 };
 
 // ================================================================== MainWindow
@@ -930,7 +955,7 @@ void MainWindow::playIndex(int index) {
     if (start > 0) osd(T("osd.resumed").arg(ltr(ControlBar::formatTime(start))), 2500);
     Library::instance()->addRecent(it.path);
     Log::write("info", "open " + it.path);
-    if (auto *ph = static_cast<Placeholder *>(m_stage->placeholder)) { ph->audioOnly = false; ph->title = it.displayName(); }
+    if (auto *ph = static_cast<Placeholder *>(m_stage->placeholder)) { ph->title = it.displayName(); ph->setAudioOnly(false); }
     updateTitle();
 }
 
@@ -952,7 +977,7 @@ void MainWindow::stopPlayback() {
     m_controls->setPlaying(false);
     m_controls->setTimes(0, 0);
     m_stage->placeholder->show();
-    static_cast<Placeholder *>(m_stage->placeholder)->audioOnly = false;
+    static_cast<Placeholder *>(m_stage->placeholder)->setAudioOnly(false);
     m_stage->placeholder->update();
     showControls();
     updateMediaActions();
@@ -1013,8 +1038,8 @@ void MainWindow::onTracksChanged() {
     for (const MediaTrack &t : m_mpv->tracks()) if (t.type == "video") video = true;
     auto *ph = static_cast<Placeholder *>(m_stage->placeholder);
     if (m_mpv->hasMedia() && !video) {
-        ph->audioOnly = true;
         ph->title = m_playlist->currentItem() ? m_playlist->currentItem()->displayName() : m_mpv->getPropertyString("media-title");
+        ph->setAudioOnly(true);
         ph->show();
         ph->update();
     } else if (m_mpv->hasMedia()) {

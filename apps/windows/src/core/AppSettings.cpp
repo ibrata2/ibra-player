@@ -37,6 +37,7 @@ const QMap<QString, QVariant> &AppSettings::defaults() {
         m["ui/singleInstance"] = true;
         m["ui/rememberGeometry"] = true;
         m["ui/osd"] = true;
+        m["ui/storeSlides"] = true;          // IBRA STORE slideshow on the idle screen
         // Playback
         m["play/seekSmall"] = 5;
         m["play/seekLarge"] = 30;

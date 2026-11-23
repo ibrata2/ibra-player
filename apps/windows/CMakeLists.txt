@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(IBRA_PLAYER VERSION 1.0.9 LANGUAGES CXX)
+project(IBRA_PLAYER VERSION 1.0.10 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,6 +38,7 @@ set(SOURCES
     src/ui/ThemeStudio.cpp         src/ui/ThemeStudio.h
     src/ui/MediaInfoDialog.cpp     src/ui/MediaInfoDialog.h
     src/ui/AboutDialog.cpp         src/ui/AboutDialog.h
+    src/ui/StoreSlides.cpp         src/ui/StoreSlides.h
     src/platform/Platform.cpp      src/platform/Platform.h
     resources/ibra.qrc
 )

@@ -18,6 +18,10 @@ cp "$QTPLUG/platforms/qwindows.dll" "$STAGE/platforms/"
 for f in qjpeg qico qgif qsvg qwebp; do
   [ -f "$QTPLUG/imageformats/$f.dll" ] && cp "$QTPLUG/imageformats/$f.dll" "$STAGE/imageformats/" || true
 done
+# store slideshow pictures are WebP/JPEG: those two decoders must ship
+for f in qjpeg qwebp; do
+  [ -f "$STAGE/imageformats/$f.dll" ] || { echo "::error::missing imageformats/$f.dll"; exit 1; }
+done
 cp "$QTPLUG"/tls/*.dll "$STAGE/tls/" 2>/dev/null || true
 cp "$QTPLUG"/styles/*.dll "$STAGE/styles/" 2>/dev/null || true
 printf '[Paths]\nPlugins = .\n' > "$STAGE/qt.conf"
